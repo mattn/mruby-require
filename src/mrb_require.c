@@ -39,6 +39,11 @@ mrb_require(mrb_state *mrb, mrb_value self) {
     mrb_raise(mrb, E_RUNTIME_ERROR, "$MRUBY_ROOT is not defined");
   }
 
+  char* ptr = RSTRING_PTR(arg);
+  while (*ptr) {
+    if (*ptr == '-') *ptr = '_';
+    ptr++;
+  }
   char lib[PATH_MAX] = {0};
   char entry[PATH_MAX] = {0};
   snprintf(lib, sizeof(lib)-1, "%s/mrbgems/g/%s/mrb_%s.dll", mruby_root,
@@ -52,13 +57,15 @@ mrb_require(mrb_state *mrb, mrb_value self) {
   }
   dlerror(); // clear last error
 
-  fn_mrb_gem_init sym = (fn_mrb_gem_init) dlsym(handle, entry);
-  if (sym == NULL) {
+  fn_mrb_gem_init fn = (fn_mrb_gem_init) dlsym(handle, entry);
+  if (fn == NULL) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
   dlerror(); // clear last error
 
-  sym(mrb);
+  fn(mrb);
+
+  dlclose(handle);
 
   return mrb_nil_value();
 }
