@@ -39,17 +39,18 @@ mrb_require(mrb_state *mrb, mrb_value self) {
     mrb_raise(mrb, E_RUNTIME_ERROR, "$MRUBY_ROOT is not defined");
   }
 
-  char* ptr = RSTRING_PTR(arg);
+  char name[PATH_MAX] = {0};
+  char lib[PATH_MAX] = {0};
+  char entry[PATH_MAX] = {0};
+  strncpy(name, RSTRING_PTR(arg), sizeof(name)-1);
+  char* ptr = name;
   while (*ptr) {
     if (*ptr == '-') *ptr = '_';
     ptr++;
   }
-  char lib[PATH_MAX] = {0};
-  char entry[PATH_MAX] = {0};
   snprintf(lib, sizeof(lib)-1, "%s/mrbgems/g/%s/mrb_%s.dll", mruby_root,
-    RSTRING_PTR(arg), RSTRING_PTR(arg));
-  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", mruby_root,
-    RSTRING_PTR(arg), RSTRING_PTR(arg));
+    RSTRING_PTR(arg), name);
+  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", name);
 
   void * handle = dlopen(lib, RTLD_LAZY|RTLD_GLOBAL);
   if (!handle) {
