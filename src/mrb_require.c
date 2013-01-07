@@ -48,8 +48,13 @@ mrb_require(mrb_state *mrb, mrb_value self) {
     if (*ptr == '-') *ptr = '_';
     ptr++;
   }
+#ifdef _WIN32
   snprintf(lib, sizeof(lib)-1, "%s/mrbgems/g/%s/mrb_%s.dll", mruby_root,
     RSTRING_PTR(arg), name);
+#else
+  snprintf(lib, sizeof(lib)-1, "%s/mrbgems/g/%s/libmrb_%s.so", mruby_root,
+    RSTRING_PTR(arg), name);
+#endif
   snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", name);
 
   void * handle = dlopen(lib, RTLD_LAZY|RTLD_GLOBAL);
