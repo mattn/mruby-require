@@ -41,7 +41,7 @@ mrb_require(mrb_state *mrb, mrb_value self) {
 
   char lib[PATH_MAX] = {0};
   char entry[PATH_MAX] = {0};
-  snprintf(lib, sizeof(lib)-1, "%s/%s/mrb_%s.dll", mruby_root,
+  snprintf(lib, sizeof(lib)-1, "%s/mrbgems/g/%s/mrb_%s.dll", mruby_root,
     RSTRING_PTR(arg), RSTRING_PTR(arg));
   snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", mruby_root,
     RSTRING_PTR(arg), RSTRING_PTR(arg));
@@ -66,7 +66,7 @@ mrb_require(mrb_state *mrb, mrb_value self) {
 void
 mrb_mruby_require_gem_init(mrb_state* mrb) {
   struct RClass* clazz = mrb_class_get(mrb, "Kernel");
-  mrb_define_class_method(mrb, clazz, "require", mrb_require, ARGS_REQ(1));
+  mrb_define_method(mrb, clazz, "require", mrb_require, ARGS_REQ(1));
 }
 
 /* vim:set et ts=2 sts=2 sw=2 tw=0: */
