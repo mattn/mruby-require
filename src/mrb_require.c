@@ -71,7 +71,7 @@ mrb_require(mrb_state *mrb, mrb_value self) {
 
   fn(mrb);
 
-  dlclose(handle);
+  //dlclose(handle);
 
   return mrb_nil_value();
 }
