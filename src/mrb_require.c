@@ -326,8 +326,15 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   }
 
   mrb_value pid = mrb_fixnum_value((int)getpid());
+  mrb_value tmpfilepath;
+#ifdef _WIN32
+  char tmpfile[PATH_MAX];
+  GetTempFileName(NULL, "mruby.", 0, tmpfile);
+  tmpfilepath = mrb_str_new2(mrb, tmpfile);
+#else
   mrb_value tmpfilepath = mrb_str_new2(mrb, "/tmp/mruby.");
   mrb_str_buf_append(mrb, tmpfilepath, mrb_fix2str(mrb, pid, 10));
+#endif
   debug("tmpfilepath: %s\n", RSTRING_PTR(tmpfilepath));
 
   mrb_compile(mrb, mrb_string_value_ptr(mrb, tmpfilepath),
