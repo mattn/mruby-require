@@ -3,6 +3,6 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   spec.authors = 'mattn'
 
   if ENV['OS'] != 'Windows_NT'
-    spec.mruby_libs = '-ldl'
+    spec.linker.libraries = 'dl'
   end
 end
