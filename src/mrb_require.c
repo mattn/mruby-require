@@ -487,4 +487,9 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
   mrb_gv_set(mrb, mrb_intern(mrb, "$\""), mrb_ary_new(mrb));
 }
 
+void
+mrb_mruby_require_gem_final(mrb_state* mrb)
+{
+}
+
 /* vim:set et ts=2 sts=2 sw=2 tw=0: */
