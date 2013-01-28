@@ -18,10 +18,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
-#include <sys/param.h>
 #include <limits.h>
+#if __MINGW32__
+#include <sys/param.h>
 #include <unistd.h>
 #include <libgen.h>
+#else
+#define PATH_MAX MAX_PATH
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -30,8 +34,8 @@
 #define dlclose(x) FreeLibrary((HMODULE)x)
 const char* dlerror() {
   DWORD err = (int) GetLastError();
-  if (err == 0) return NULL;
   static char buf[256];
+  if (err == 0) return NULL;
   FormatMessage(
     FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
     NULL,
@@ -58,7 +62,6 @@ realpath(const char *path, char *resolved_path) {
 #if defined(_WIN32)
 # define ENV_SEP ';'
 # define SO_EXT ".dll"
-# define environ _environ
 #elif defined(__linux__)
 # define ENV_SEP ':'
 # define SO_EXT ".so"
@@ -88,6 +91,8 @@ mrb_yield_internal(mrb_state *mrb, mrb_value b, int argc, mrb_value *argv, mrb_v
 static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
 {
+  int i;
+  int envlen;
   mrb_value ary = mrb_ary_new(mrb);
 
   char *env= getenv(name);
@@ -95,15 +100,15 @@ envpath_to_mrb_ary(mrb_state *mrb, const char *name)
     return ary;
   }
 
-  int i;
-  int envlen = strlen(env);
+  envlen = strlen(env);
   for (i = 0; i < envlen; i++) {
     char *ptr = env + i;
     char *end = strchr(ptr, ENV_SEP);
+    int len;
     if (end == NULL) {
       end = env + envlen;
     }
-    int len = end - ptr;
+    len = end - ptr;
     mrb_ary_push(mrb, ary, mrb_str_new(mrb, ptr, len));
     i += len;
   }
@@ -115,6 +120,8 @@ envpath_to_mrb_ary(mrb_state *mrb, const char *name)
 static mrb_value
 find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
 {
+  FILE *fp;
+  char fpath[MAXPATHLEN];
   mrb_value filepath = mrb_str_dup(mrb, path);
   mrb_str_cat2(mrb, filepath, "/");
   mrb_str_buf_append(mrb, filepath, fname);
@@ -127,14 +134,13 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
   }
   debug("filepath: %s\n", RSTRING_PTR(filepath));
 
-  char fpath[MAXPATHLEN];
   realpath(RSTRING_PTR(filepath), fpath);
   if (fpath == NULL) {
     return mrb_nil_value();
   }
   debug("fpath: %s\n", fpath);
 
-  FILE *fp = fopen(fpath, "r");
+  fp = fopen(fpath, "r");
   if (fp == NULL) {
     return mrb_nil_value();
   }
@@ -146,6 +152,10 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
 static mrb_value
 find_file(mrb_state *mrb, mrb_value filename)
 {
+  char *ext;
+  mrb_value exts;
+  int i, j;
+
   char *fname = RSTRING_PTR(filename);
   mrb_value filepath = mrb_nil_value();
   mrb_value load_path = mrb_obj_dup(mrb, mrb_gv_get(mrb, mrb_intern(mrb, "$:")));
@@ -156,8 +166,8 @@ find_file(mrb_state *mrb, mrb_value filename)
     return mrb_undef_value();
   }
 
-  char *ext = strrchr(fname, '.');
-  mrb_value exts = mrb_ary_new(mrb);
+  ext = strrchr(fname, '.');
+  exts = mrb_ary_new(mrb);
   if (ext == NULL) {
     mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".rb"));
     mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".mrb"));
@@ -182,7 +192,6 @@ find_file(mrb_state *mrb, mrb_value filename)
     mrb_ary_push(mrb, load_path, mrb_str_new2(mrb, "."));
   }
 
-  int i, j;
   for (i = 0; i < RARRAY_LEN(load_path); i++) {
     for (j = 0; j < RARRAY_LEN(exts); j++) {
       filepath = find_file_check(mrb, RARRAY_PTR(load_path)[i], filename, RARRAY_PTR(exts)[j]);
@@ -211,6 +220,10 @@ static void
 load_mrb_file_with_filepath(mrb_state *mrb, mrb_value filepath, mrb_value origfilepath)
 {
   char *fpath = RSTRING_PTR(filepath);
+  int sirep;
+  int arena_idx;
+  FILE *fp;
+  int n;
 
   {
     FILE *fp = fopen(fpath, "r");
@@ -221,11 +234,11 @@ load_mrb_file_with_filepath(mrb_state *mrb, mrb_value filepath, mrb_value origfi
     fclose(fp);
   }
 
-  int sirep = mrb->irep_len;
-  int arena_idx = mrb_gc_arena_save(mrb);
+  sirep = mrb->irep_len;
+  arena_idx = mrb_gc_arena_save(mrb);
 
-  FILE *fp = fopen(fpath, "r");
-  int n = mrb_read_irep_file(mrb, fp);
+  fp = fopen(fpath, "r");
+  n = mrb_read_irep_file(mrb, fp);
   fclose(fp);
 
   mrb_gc_arena_restore(mrb, arena_idx);
@@ -233,7 +246,7 @@ load_mrb_file_with_filepath(mrb_state *mrb, mrb_value filepath, mrb_value origfi
   if (n >= 0) {
     struct RProc *proc;
     mrb_irep *irep = mrb->irep[n];
-    int i;
+    size_t i;
     for (i = sirep; i < mrb->irep_len; i++) {
       mrb->irep[i]->filename = mrb_string_value_ptr(mrb, origfilepath);
     }
@@ -292,17 +305,18 @@ mrb_compile(mrb_state *mrb0, char *tmpfilepath, char *filepath)
 static void
 load_so_file(mrb_state *mrb, mrb_value filepath)
 {
+  char entry[PATH_MAX] = {0};
   typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
+  fn_mrb_gem_init fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
   if (!handle) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
   dlerror(); // clear last error
 
-  char entry[PATH_MAX] = {0};
   snprintf(entry, sizeof(entry)-1, "mrb_mruby_require_example_gem_init");
 
-  fn_mrb_gem_init fn = (fn_mrb_gem_init) dlsym(handle, entry);
+  fn = (fn_mrb_gem_init) dlsym(handle, entry);
   if (fn == NULL) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
@@ -314,7 +328,9 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
 static void
 load_rb_file(mrb_state *mrb, mrb_value filepath)
 {
+  mrb_value tmpfilepath;
   char *fpath = RSTRING_PTR(filepath);
+  mrb_value pid;
 
   {
     FILE *fp = fopen(fpath, "r");
@@ -325,15 +341,16 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
     fclose(fp);
   }
 
-  mrb_value tmpfilepath;
 #ifdef _WIN32
-  char tmpfile[PATH_MAX];
-  GetTempFileName(NULL, "mruby.", 0, tmpfile);
-  tmpfilepath = mrb_str_new2(mrb, tmpfile);
+  {
+    char tmpfile[PATH_MAX];
+    GetTempFileName(NULL, "mruby.", 0, tmpfile);
+    tmpfilepath = mrb_str_new2(mrb, tmpfile);
+  }
 #else
-  mrb_value tmpfilepath = mrb_str_new2(mrb, "/tmp/mruby.");
+  tmpfilepath = mrb_str_new2(mrb, "/tmp/mruby.");
 #endif
-  mrb_value pid = mrb_fixnum_value((int)getpid());
+  pid = mrb_fixnum_value((int)getpid());
   mrb_str_buf_append(mrb, tmpfilepath, mrb_fix2str(mrb, pid, 10));
   debug("tmpfilepath: %s\n", RSTRING_PTR(tmpfilepath));
 
@@ -392,6 +409,7 @@ mrb_f_load(mrb_state *mrb, mrb_value self)
 static int
 loaded_files_check(mrb_state *mrb, mrb_value filepath)
 {
+  mrb_value loading_files;
   mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\""));
   int i;
   for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
@@ -400,7 +418,7 @@ loaded_files_check(mrb_state *mrb, mrb_value filepath)
     }
   }
 
-  mrb_value loading_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\"_"));
+  loading_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\"_"));
   if (mrb_nil_p(loading_files)) {
     return 1;
   }
