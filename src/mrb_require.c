@@ -61,13 +61,10 @@ realpath(const char *path, char *resolved_path) {
 
 #if defined(_WIN32)
 # define ENV_SEP ';'
-# define SO_EXT ".dll"
 #elif defined(__linux__)
 # define ENV_SEP ':'
-# define SO_EXT ".so"
 #elif defined(__APPLE__)
 # define ENV_SEP ':'
-# define SO_EXT ".dyn"
 #endif
 
 #define E_LOAD_ERROR (mrb_class_obj_get(mrb, "ScriptError"))
@@ -171,7 +168,7 @@ find_file(mrb_state *mrb, mrb_value filename)
   if (ext == NULL) {
     mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".rb"));
     mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".mrb"));
-    mrb_ary_push(mrb, exts, mrb_str_new2(mrb, SO_EXT));
+    mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".so"));
   } else {
     mrb_ary_push(mrb, exts, mrb_nil_value());
   }
@@ -305,7 +302,7 @@ mrb_compile(mrb_state *mrb0, char *tmpfilepath, char *filepath)
 static void
 load_so_file(mrb_state *mrb, mrb_value filepath)
 {
-  char entry[PATH_MAX] = {0};
+  char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
   typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
   fn_mrb_gem_init fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
@@ -314,9 +311,24 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   }
   dlerror(); // clear last error
 
-  snprintf(entry, sizeof(entry)-1, "mrb_mruby_require_example_gem_init");
+  tmp = top = ptr = strdup(RSTRING_PTR(filepath));
+  while (tmp) {
+    if ((tmp = strchr(ptr, '/')) || (tmp = strchr(ptr, '\\'))) {
+      ptr = tmp + 1;
+    }
+  }
+
+  tmp = strrchr(ptr, '.');
+  if (tmp) *tmp = 0;
+  tmp = ptr;
+  while (*tmp) {
+    if (*tmp == '-') *tmp = '_';
+    tmp++;
+  }
+  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", ptr);
 
   fn = (fn_mrb_gem_init) dlsym(handle, entry);
+  free(top);
   if (fn == NULL) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
@@ -365,16 +377,12 @@ static void
 load_file(mrb_state *mrb, mrb_value filepath)
 {
   char *ext = strrchr(RSTRING_PTR(filepath), '.');
-  if (ext == NULL) {
-    mrb_raisef(mrb, E_LOAD_ERROR, "Filepath '%s' is invalid.", RSTRING_PTR(filepath));
-    return ;
-  }
 
   if (strcmp(ext, ".mrb") == 0) {
     load_mrb_file(mrb, filepath);
   } else if (strcmp(ext, ".rb") == 0) {
     load_rb_file(mrb, filepath);
-  } else if (strcmp(ext, SO_EXT) == 0) {
+  } else if (strcmp(ext, ".so") == 0) {
     load_so_file(mrb, filepath);
   } else {
     mrb_raisef(mrb, E_LOAD_ERROR, "Filepath '%s' is invalid extension.",
@@ -489,7 +497,11 @@ extern char **environ;
 static mrb_value
 mrb_init_load_path(mrb_state *mrb)
 {
-  return envpath_to_mrb_ary(mrb, "MRBLIB");
+  mrb_value ary = envpath_to_mrb_ary(mrb, "MRBLIB");
+#ifdef MRBGEMS_ROOT
+  mrb_ary_push(mrb, ary, mrb_str_new_cstr(mrb, MRBGEMS_ROOT));
+#endif
+  return ary;
 }
 
 void
