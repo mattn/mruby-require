@@ -7,7 +7,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     if enable_gems?
       sharedlibs = []
       gems.each do |g|
-        sharedlib = "#{g.build_dir}/lib/#{g.name}.so"
+        sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
         file sharedlib => g.objs do |t|
           if ENV['OS'] != 'Windows_NT'
             deffile = "#{build_dir}/lib/#{g.name}.def"
@@ -23,12 +23,14 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
           end
           options = {
               :flags => '-shared',
-              :outfile => "#{build_dir}/lib/#{g.name}.so",
+              :outfile => sharedlib,
               :objs => g.objs ? g.objs.join(" ") : "" + " " + deffile,
               :libs => "#{build_dir}/lib/libmruby.a #{build_dir}/lib/libmruby_core.a" + " " + g.linker.libraries.flatten.uniq.map {|l| "-l#{l}"}.join(" "),
               :flags_before_libraries => '',
               :flags_after_libraries => '',
           }
+
+          _pp "LD", sharedlib
           sh linker.command + ' ' + (linker.link_options % options)
         end
 
