@@ -7,30 +7,32 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     if enable_gems?
       sharedlibs = []
       gems.each do |g|
-        libs = gems.map {|g| g.linker.libraries }.flatten.map {|l| "-l#{l}"}
-        sharedlibs << "#{g.build_dir}/#{g.name}.so"
-
-        if ENV['OS'] != 'Windows_NT'
-          deffile = "#{build_dir}/lib/#{g.name}.def"
-          open(deffile, 'w') do |f|
-            f.puts [
-              "EXPORTS",
-              "\tmrb_#{g.name.gsub(/-/, '_')}_gem_init",
-              "\tmrb_#{g.name.gsub(/-/, '_')}_gem_final",
-            ].join("\n")
+        sharedlib = "#{g.build_dir}/lib/#{g.name}.so"
+        file sharedlib => g.objs do |t|
+          if ENV['OS'] != 'Windows_NT'
+            deffile = "#{build_dir}/lib/#{g.name}.def"
+            open(deffile, 'w') do |f|
+              f.puts [
+                "EXPORTS",
+                "\tmrb_#{g.name.gsub(/-/, '_')}_gem_init",
+                "\tmrb_#{g.name.gsub(/-/, '_')}_gem_final",
+              ].join("\n")
+            end
+          else
+            deffile = ''
           end
-        else
-          deffile = ''
+          options = {
+              :flags => '-shared',
+              :outfile => "#{build_dir}/lib/#{g.name}.so",
+              :objs => g.objs ? g.objs.join(" ") : "" + " " + deffile,
+              :libs => "#{build_dir}/lib/libmruby.a #{build_dir}/lib/libmruby_core.a" + " " + g.linker.libraries.flatten.uniq.map {|l| "-l#{l}"}.join(" "),
+              :flags_before_libraries => '',
+              :flags_after_libraries => '',
+          }
+          sh linker.command + ' ' + (linker.link_options % options)
         end
-        options = {
-            :flags => '-shared',
-            :outfile => "#{build_dir}/lib/#{g.name}.so",
-            :objs => g.objs.join(" ") + " " + deffile,
-            :libs => "#{build_dir}/lib/libmruby.a #{build_dir}/lib/libmruby_core.a" + " " + libs.join(" "),
-            :flags_before_libraries => '',
-            :flags_after_libraries => '',
-        }
-        sh linker.command + ' ' + (linker.link_options % options)
+
+        sharedlibs << sharedlib
       end
       libmruby.flatten!.reject! {|l| l =~ /\/mrbgems\//}
       gems.reject! {|g| g.name != 'mruby-require' }
