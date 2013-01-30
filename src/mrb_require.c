@@ -338,6 +338,44 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
 }
 
 static void
+unload_so_file(mrb_state *mrb, mrb_value filepath)
+{
+  char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
+  typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
+  fn_mrb_gem_init fn;
+  void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
+  if (!handle) {
+    return;
+  }
+  dlerror(); // clear last error
+
+  tmp = top = ptr = strdup(RSTRING_PTR(filepath));
+  while (tmp) {
+    if ((tmp = strchr(ptr, '/')) || (tmp = strchr(ptr, '\\'))) {
+      ptr = tmp + 1;
+    }
+  }
+
+  tmp = strrchr(ptr, '.');
+  if (tmp) *tmp = 0;
+  tmp = ptr;
+  while (*tmp) {
+    if (*tmp == '-') *tmp = '_';
+    tmp++;
+  }
+  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_final", ptr);
+
+  fn = (fn_mrb_gem_init) dlsym(handle, entry);
+  free(top);
+  if (fn == NULL) {
+    return;
+  }
+  dlerror(); // clear last error
+
+  fn(mrb);
+}
+
+static void
 load_rb_file(mrb_state *mrb, mrb_value filepath)
 {
   mrb_value tmpfilepath;
@@ -520,6 +558,15 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
 void
 mrb_mruby_require_gem_final(mrb_state* mrb)
 {
+  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\""));
+  int i;
+  for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
+    mrb_value f = RARRAY_PTR(loaded_files)[i];
+    const char* ext = strrchr(RSTRING_PTR(f), '.');
+    if (strcmp(ext, ".so") == 0) {
+      unload_so_file(mrb, f);
+    }
+  }
 }
 
 /* vim:set et ts=2 sts=2 sw=2 tw=0: */
