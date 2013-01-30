@@ -19,12 +19,12 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <limits.h>
-#if __MINGW32__
+#if _MVC_VER
+#define PATH_MAX MAX_PATH
+#else
 #include <sys/param.h>
 #include <unistd.h>
 #include <libgen.h>
-#else
-#define PATH_MAX MAX_PATH
 #endif
 
 #ifdef _WIN32

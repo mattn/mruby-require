@@ -1,10 +1,12 @@
 MRuby::Gem::Specification.new('mruby-require') do |spec|
   spec.license = 'MIT'
   spec.authors = 'mattn'
+  ENV["MRUBY_REQUIRE"] = "true"
 
   top_build_dir = build_dir
   MRuby.each_target do
     if enable_gems?
+      top_build_dir = build_dir
       sharedlibs = []
       gems.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
@@ -40,14 +42,13 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       gems.reject! {|g| g.name != 'mruby-require' }
 
       file "#{build_dir}/mrbgems/gem_init.c" => sharedlibs.reject{|l| l =~ /\/mruby-require\//}
-      top_build_dir = build_dir
     end
   end
 
   spec.cc.include_paths << ["#{build.root}/src"]
   if ENV['OS'] != 'Windows_NT'
-    spec.linker.libraries = 'dl'
-    spec.cc.flags << "-DMRBGEMS_ROOT=\"#{File.expand_path top_build_dir}/lib\""
+    spec.linker.libraries << ['dl']
+    spec.cc.flags << "-DMRBGEMS_ROOT=\\\"#{File.expand_path top_build_dir}/lib\\\""
   else
     spec.cc.flags << "-DMRBGEMS_ROOT=\"\"\"#{File.expand_path top_build_dir}/lib\"\"\""
   end
