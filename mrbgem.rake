@@ -29,7 +29,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
               :flags => '-shared',
               :outfile => sharedlib,
               :objs => g.objs ? g.objs.join(" ") : "" + " " + deffile,
-              :libs => "#{build_dir}/lib/libmruby.a #{build_dir}/lib/libmruby_core.a" + " " + linker.libraries.flatten.uniq.map {|l| "-l#{l}"}.join(" "),
+              :libs => "#{build_dir}/lib/libmruby.a #{build_dir}/lib/libmruby_core.a" + " " + g.linker.libraries.flatten.uniq.map {|l| "-l#{l}"}.join(" "),
               :flags_before_libraries => '',
               :flags_after_libraries => '',
           }
