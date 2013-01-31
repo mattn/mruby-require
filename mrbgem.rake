@@ -39,9 +39,10 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
         sharedlibs << sharedlib
       end
       libmruby.flatten!.reject! {|l| l =~ /\/mrbgems\//}
+      cc.include_paths.reject! {|l| l =~ /\/mrbgems\// && l !~ /\/mruby-require/}
       gems.reject! {|g| g.name != 'mruby-require' }
 
-      file "#{build_dir}/mrbgems/gem_init.c" => sharedlibs.reject{|l| l =~ /\/mruby-require\//}
+      file "#{build_dir}/mrbgems/gem_init.c" => sharedlibs.reject{|l| l =~ /\/mruby-require/}
     end
   end
 
