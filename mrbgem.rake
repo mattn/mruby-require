@@ -2,11 +2,13 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   spec.license = 'MIT'
   spec.authors = 'mattn'
   ENV["MRUBY_REQUIRE"] = "true"
+  @bundled = []
 
   top_build_dir = build_dir
   MRuby.each_target do
     if enable_gems?
       top_build_dir = build_dir
+      @bundled = gems.clone.reject {|g| g.name == 'mruby-require'}
       sharedlibs = []
       gems.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
@@ -43,6 +45,29 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       gems.reject! {|g| g.name != 'mruby-require' }
 
       file "#{build_dir}/mrbgems/gem_init.c" => sharedlibs.reject{|l| l =~ /\/mruby-require/}
+    end
+  end
+  module MRuby
+    class Build
+      alias_method :old_print_build_summary, :print_build_summary
+      def print_build_summary 
+        puts "================================================"
+        puts "      Config Name: #{@name}"
+        puts " Output Directory: #{self.build_dir}"
+        puts "         Binaries: #{@bins.join(', ')}" unless @bins.empty?
+        unless @gems.empty?
+          puts "    Included Gems:"
+          @gems.map(&:name).each do |name|
+            puts "             #{name}"
+          end
+          puts "     Bundled Gems:"
+          @bundled.map(&:name).each do |name|
+            puts "             #{name}"
+          end
+        end
+        puts "================================================"
+        puts
+      end
     end
   end
 
