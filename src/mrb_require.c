@@ -19,8 +19,9 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <limits.h>
-#if _MVC_VER
+#ifdef _MSC_VER
 #define PATH_MAX MAX_PATH
+#define strdup(x) _strdup(x)
 #else
 #include <sys/param.h>
 #include <unistd.h>

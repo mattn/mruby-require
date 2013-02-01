@@ -4,16 +4,19 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   ENV["MRUBY_REQUIRE"] = ""
   @bundled = []
 
+  is_vc = ENV['OS'] == 'Windows_NT' && cc.command =~ /^cl(\.exe)?$/
+  #cc.defines << "/LD" if is_vc
   top_build_dir = build_dir
   MRuby.each_target do
     if enable_gems?
       top_build_dir = build_dir
       @bundled = gems.clone.reject {|g| g.name == 'mruby-require'}
       sharedlibs = []
-      gems.each do |g|
+      gems.reject! {|g| g.name != 'mruby-require' }
+      @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
         file sharedlib => g.objs do |t|
-          if ENV['OS'] != 'Windows_NT'
+          if ENV['OS'] == 'Windows_NT'
             deffile = "#{build_dir}/lib/#{g.name}.def"
             open(deffile, 'w') do |f|
               f.puts [
@@ -26,10 +29,16 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
             deffile = ''
           end
           options = {
-              :flags => '-shared',
+              :flags => [
+                  is_vc ? '/DLL' : '-shared',
+                  g.linker.library_paths.flatten.map {|l| is_vc ? "/LIBPATH:#{l}" : "-L#{l}"}].flatten.join(" "),
               :outfile => sharedlib,
-              :objs => g.objs ? g.objs.join(" ") : "" + " " + deffile,
-              :libs => "#{build_dir}/lib/libmruby.a #{build_dir}/lib/libmruby_core.a" + " " + g.linker.libraries.flatten.uniq.map {|l| "-l#{l}"}.join(" "),
+              :objs => g.objs ? g.objs.join(" ") : "",
+              :libs => [
+                  (is_vc ? '/DEF:' : '') + deffile,
+                  libfile("#{build_dir}/lib/libmruby"),
+                  libfile("#{build_dir}/lib/libmruby_core"),
+                  g.linker.libraries.flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
               :flags_before_libraries => '',
               :flags_after_libraries => '',
           }
@@ -39,12 +48,12 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
         end
 
         sharedlibs << sharedlib
+        file sharedlib => libfile("#{top_build_dir}/lib/libmruby")
       end
       libmruby.flatten!.reject! {|l| l =~ /\/mrbgems\//}
       cc.include_paths.reject! {|l| l =~ /\/mrbgems\// && l !~ /\/mruby-require/}
-      gems.reject! {|g| g.name != 'mruby-require' }
 
-      file exefile("#{top_build_dir}/bin/mruby") => sharedlibs.reject{|l| l =~ /\/mruby-require/}
+      file exefile("bin/mruby") => sharedlibs
     end
   end
   module MRuby
