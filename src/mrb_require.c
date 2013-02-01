@@ -306,6 +306,7 @@ mrb_compile(mrb_state *mrb0, char *tmpfilepath, char *filepath)
 static void
 load_so_file(mrb_state *mrb, mrb_value filepath)
 {
+  int ai;
   char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
   typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
   fn_mrb_gem_init fn;
@@ -338,7 +339,9 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   }
   dlerror(); // clear last error
 
+  ai = mrb_gc_arena_save(mrb);
   fn(mrb);
+  mrb_gc_arena_restore(mrb, ai);
 }
 
 static void
@@ -514,7 +517,7 @@ mrb_value
 mrb_require(mrb_state *mrb, mrb_value filename)
 {
   mrb_value filepath = find_file(mrb, filename);
-  if (loaded_files_check(mrb, filepath)) {
+  if (!mrb_nil_p(filepath) && loaded_files_check(mrb, filepath)) {
     loading_files_add(mrb, filepath);
     load_file(mrb, filepath);
     loaded_files_add(mrb, filepath);
