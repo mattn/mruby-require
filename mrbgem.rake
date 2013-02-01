@@ -1,7 +1,7 @@
 MRuby::Gem::Specification.new('mruby-require') do |spec|
   spec.license = 'MIT'
   spec.authors = 'mattn'
-  ENV["MRUBY_REQUIRE"] = "true"
+  ENV["MRUBY_REQUIRE"] = ""
   @bundled = []
 
   top_build_dir = build_dir
@@ -44,7 +44,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       cc.include_paths.reject! {|l| l =~ /\/mrbgems\// && l !~ /\/mruby-require/}
       gems.reject! {|g| g.name != 'mruby-require' }
 
-      file "#{build_dir}/mrbgems/gem_init.c" => sharedlibs.reject{|l| l =~ /\/mruby-require/}
+      file exefile("#{top_build_dir}/bin/mruby") => sharedlibs.reject{|l| l =~ /\/mruby-require/}
     end
   end
   module MRuby
