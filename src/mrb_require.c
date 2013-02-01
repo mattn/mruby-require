@@ -550,7 +550,7 @@ mrb_init_load_path(mrb_state *mrb)
   char *env;
   mrb_value ary = envpath_to_mrb_ary(mrb, "MRBLIB");
 
-  env = getenv("MRUBY_ROOT");
+  env = getenv("MRBGEMS_ROOT");
   if (env)
     mrb_ary_push(mrb, ary, mrb_str_new_cstr(mrb, env));
 #ifdef MRBGEMS_ROOT
