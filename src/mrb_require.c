@@ -311,8 +311,6 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   fn_mrb_gem_init fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
   if (!handle) {
-    printf("%p\n", dlerror());
-    printf("%s\n", dlerror());
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
   dlerror(); // clear last error
