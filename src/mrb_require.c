@@ -191,7 +191,11 @@ find_file(mrb_state *mrb, mrb_value filename)
 
   for (i = 0; i < RARRAY_LEN(load_path); i++) {
     for (j = 0; j < RARRAY_LEN(exts); j++) {
-      filepath = find_file_check(mrb, RARRAY_PTR(load_path)[i], filename, RARRAY_PTR(exts)[j]);
+      filepath = find_file_check(
+        mrb,
+        mrb_ary_entry(load_path, i),
+        filename,
+        mrb_ary_entry(exts, j));
       if (!mrb_nil_p(filepath)) {
         return filepath;
       }
@@ -307,6 +311,8 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   fn_mrb_gem_init fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
   if (!handle) {
+    printf("%p\n", dlerror());
+    printf("%s\n", dlerror());
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
   dlerror(); // clear last error
@@ -341,13 +347,12 @@ static void
 unload_so_file(mrb_state *mrb, mrb_value filepath)
 {
   char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
-  typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
-  fn_mrb_gem_init fn;
+  typedef void (*fn_mrb_gem_final)(mrb_state *mrb);
+  fn_mrb_gem_final fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
   if (!handle) {
     return;
   }
-  dlerror(); // clear last error
 
   tmp = top = ptr = strdup(RSTRING_PTR(filepath));
   while (tmp) {
@@ -365,12 +370,11 @@ unload_so_file(mrb_state *mrb, mrb_value filepath)
   }
   snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_final", ptr);
 
-  fn = (fn_mrb_gem_init) dlsym(handle, entry);
+  fn = (fn_mrb_gem_final) dlsym(handle, entry);
   free(top);
   if (fn == NULL) {
     return;
   }
-  dlerror(); // clear last error
 
   fn(mrb);
 }
@@ -459,7 +463,10 @@ loaded_files_check(mrb_state *mrb, mrb_value filepath)
   mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\""));
   int i;
   for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
-    if (mrb_str_cmp(mrb, RARRAY_PTR(loaded_files)[i], filepath) == 0) {
+    if (mrb_str_cmp(
+        mrb,
+        mrb_ary_entry(loaded_files, i),
+        filepath) == 0) {
       return 0;
     }
   }
@@ -469,7 +476,10 @@ loaded_files_check(mrb_state *mrb, mrb_value filepath)
     return 1;
   }
   for (i = 0; i < RARRAY_LEN(loading_files); i++) {
-    if (mrb_str_cmp(mrb, RARRAY_PTR(loading_files)[i], filepath) == 0) {
+    if (mrb_str_cmp(
+        mrb,
+        mrb_ary_entry(loading_files, i),
+        filepath) == 0) {
       return 0;
     }
   }
@@ -539,12 +549,14 @@ mrb_init_load_path(mrb_state *mrb)
 #ifdef MRBGEMS_ROOT
   mrb_ary_push(mrb, ary, mrb_str_new_cstr(mrb, MRBGEMS_ROOT));
 #endif
+
   return ary;
 }
 
 void
 mrb_mruby_require_gem_init(mrb_state* mrb)
 {
+  char *env;
   struct RClass *krn;
   krn = mrb->kernel_module;
 
@@ -553,6 +565,23 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
 
   mrb_gv_set(mrb, mrb_intern(mrb, "$:"), mrb_init_load_path(mrb));
   mrb_gv_set(mrb, mrb_intern(mrb, "$\""), mrb_ary_new(mrb));
+
+  env = getenv("MRUBY_REQUIRE");
+  if (env != NULL) {
+    int i, envlen;
+    envlen = strlen(env);
+    for (i = 0; i < envlen; i++) {
+      char *ptr = env + i;
+      char *end = strchr(ptr, ',');
+      int len;
+      if (end == NULL) {
+        end = env + envlen;
+      }
+      len = end - ptr;
+      mrb_require(mrb, mrb_str_new(mrb, ptr, len));
+      i += len;
+    }
+  }
 }
 
 void
@@ -561,9 +590,9 @@ mrb_mruby_require_gem_final(mrb_state* mrb)
   mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\""));
   int i;
   for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
-    mrb_value f = RARRAY_PTR(loaded_files)[i];
+    mrb_value f = mrb_ary_entry(loaded_files, i);
     const char* ext = strrchr(RSTRING_PTR(f), '.');
-    if (strcmp(ext, ".so") == 0) {
+    if (ext && strcmp(ext, ".so") == 0) {
       unload_so_file(mrb, f);
     }
   }
