@@ -49,11 +49,10 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
 
         sharedlibs << sharedlib
         file sharedlib => libfile("#{top_build_dir}/lib/libmruby")
+        Rake.application.top_level_tasks << sharedlibs.flatten
       end
       libmruby.flatten!.reject! {|l| l =~ /\/mrbgems\//}
       cc.include_paths.reject! {|l| l =~ /\/mrbgems\// && l !~ /\/mruby-require/}
-
-      file exefile("bin/mruby") => sharedlibs
     end
   end
   module MRuby
