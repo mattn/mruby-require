@@ -49,7 +49,8 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
 
         sharedlibs << sharedlib
         file sharedlib => libfile("#{top_build_dir}/lib/libmruby")
-        Rake.application.top_level_tasks << sharedlib
+
+        Rake::Task.tasks << sharedlib
       end
       libmruby.flatten!.reject! {|l| l =~ /\/mrbgems\//}
       cc.include_paths.reject! {|l| l =~ /\/mrbgems\// && l !~ /\/mruby-require/}
@@ -59,6 +60,12 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     class Build
       alias_method :old_print_build_summary, :print_build_summary
       def print_build_summary 
+        Rake::Task.tasks.each do |t|
+          if t.name =~ /\.so$/
+            t.invoke
+          end
+        end
+
         puts "================================================"
         puts "      Config Name: #{@name}"
         puts " Output Directory: #{self.build_dir}"
