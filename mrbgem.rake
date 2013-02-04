@@ -16,7 +16,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
         objs = g.objs ? g.objs : []
-		if File.exist?("#{build_dir}/mrbgem/#{g.name}/gem_init.c")
+        if File.exist?("#{build_dir}/mrbgem/#{g.name}/gem_init.c")
           objs << "#{build_dir}/mrbgem/#{g.name}/gem_init.c"
         end
         file sharedlib => objs do |t|
