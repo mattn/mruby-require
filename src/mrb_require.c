@@ -331,7 +331,7 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
     if (*tmp == '-') *tmp = '_';
     tmp++;
   }
-  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", ptr);
+  snprintf(entry, sizeof(entry)-1, "GENERATED_TMP_mrb_%s_gem_init", ptr);
 
   fn = (fn_mrb_gem_init) dlsym(handle, entry);
   free(top);
@@ -370,7 +370,7 @@ unload_so_file(mrb_state *mrb, mrb_value filepath)
     if (*tmp == '-') *tmp = '_';
     tmp++;
   }
-  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_final", ptr);
+  snprintf(entry, sizeof(entry)-1, "GENERATED_TMP_mrb_%s_gem_final", ptr);
 
   fn = (fn_mrb_gem_final) dlsym(handle, entry);
   free(top);

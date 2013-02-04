@@ -15,14 +15,18 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       gems.reject! {|g| g.name != 'mruby-require' }
       @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
-        file sharedlib => g.objs do |t|
+        objs = g.objs ? g.objs : []
+		if File.exist?("#{build_dir}/mrbgem/#{g.name}/gem_init.c")
+          objs << "#{build_dir}/mrbgem/#{g.name}/gem_init.c"
+        end
+        file sharedlib => objs do |t|
           if ENV['OS'] == 'Windows_NT'
             deffile = "#{build_dir}/lib/#{g.name}.def"
             open(deffile, 'w') do |f|
               f.puts [
                 "EXPORTS",
-                "\tmrb_#{g.name.gsub(/-/, '_')}_gem_init",
-                "\tmrb_#{g.name.gsub(/-/, '_')}_gem_final",
+                "\tGENERATED_TMP_mrb_#{g.name.gsub(/-/, '_')}_gem_init",
+                "\tGENERATED_TMP_mrb_#{g.name.gsub(/-/, '_')}_gem_final",
               ].join("\n")
             end
           else
@@ -33,7 +37,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
                   is_vc ? '/DLL' : '-shared',
                   g.linker.library_paths.flatten.map {|l| is_vc ? "/LIBPATH:#{l}" : "-L#{l}"}].flatten.join(" "),
               :outfile => sharedlib,
-              :objs => g.objs ? g.objs.join(" ") : "",
+              :objs => objs.join(" "),
               :libs => [
                   (is_vc ? '/DEF:' : '') + deffile,
                   libfile("#{build_dir}/lib/libmruby"),
