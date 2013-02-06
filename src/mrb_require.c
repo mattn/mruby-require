@@ -304,11 +304,36 @@ mrb_compile(mrb_state *mrb0, char *tmpfilepath, char *filepath)
   return mrb_nil_value();
 }
 
+void
+mrb_load_irep_data(mrb_state* mrb, const char* data)
+{
+  int ai = mrb_gc_arena_save(mrb);
+  int n = mrb_read_irep(mrb,data);
+  mrb_gc_arena_restore(mrb,ai);
+
+  if (n >= 0) {
+    struct RProc *proc;
+    mrb_irep *irep = mrb->irep[n];
+
+    replace_stop_with_return(mrb, irep);
+    proc = mrb_proc_new(mrb, irep);
+    proc->target_class = mrb->object_class;
+
+    int arena_idx = mrb_gc_arena_save(mrb);
+    mrb_yield_internal(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
+    mrb_gc_arena_restore(mrb, arena_idx);
+  } else if (mrb->exc) {
+    // fail to load
+    longjmp(*(jmp_buf*)mrb->jmp, 1);
+  }
+}
+
 static void
 load_so_file(mrb_state *mrb, mrb_value filepath)
 {
   int ai;
   char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
+  char entry_irep[PATH_MAX] = {0};
   typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
   fn_mrb_gem_init fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
@@ -331,9 +356,10 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
     if (*tmp == '-') *tmp = '_';
     tmp++;
   }
-  snprintf(entry, sizeof(entry)-1, "GENERATED_TMP_mrb_%s_gem_init", ptr);
-
+  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", ptr);
+  snprintf(entry_irep, sizeof(entry_irep)-1, "gem_mrblib_irep_%s", ptr);
   fn = (fn_mrb_gem_init) dlsym(handle, entry);
+  const char* data = (const char *)dlsym(handle, entry_irep);
   free(top);
   if (fn == NULL) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
@@ -343,6 +369,11 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   ai = mrb_gc_arena_save(mrb);
   fn(mrb);
   mrb_gc_arena_restore(mrb, ai);
+
+  if (data != NULL)
+  {
+    mrb_load_irep_data(mrb,data);
+  }
 }
 
 static void
@@ -519,8 +550,9 @@ mrb_require(mrb_state *mrb, mrb_value filename)
 {
   mrb_value filepath = find_file(mrb, filename);
   if (!mrb_nil_p(filepath) && loaded_files_check(mrb, filepath)) {
-    loading_files_add(mrb, filepath);
-    load_file(mrb, filepath);
+
+    loading_files_add(mrb, filepath); 
+    load_file(mrb, filepath);  
     loaded_files_add(mrb, filepath);
     return mrb_true_value();
   }
@@ -586,10 +618,12 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
         end = env + envlen;
       }
       len = end - ptr;
+
       mrb_require(mrb, mrb_str_new(mrb, ptr, len));
       i += len;
     }
   }
+   
 }
 
 void
