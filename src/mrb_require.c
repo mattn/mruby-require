@@ -14,7 +14,7 @@
 #include "mruby/array.h"
 #include "mruby/numeric.h"
 
-#include "opcode.h"
+#include "mruby/opcode.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
