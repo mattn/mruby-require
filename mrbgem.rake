@@ -10,7 +10,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   MRuby.each_target do
     if enable_gems?
       top_build_dir = build_dir
-      @bundled = gems.clone.reject {|g| g.name == 'mruby-require'}
+      @bundled = gems.uniq {|x| x.name}.clone.reject {|g| g.name == 'mruby-require'}
       sharedlibs = []
       gems.reject! {|g| g.name != 'mruby-require' }
       @bundled.each do |g|
