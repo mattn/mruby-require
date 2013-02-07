@@ -23,11 +23,10 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
           if ENV['OS'] == 'Windows_NT'
             deffile = "#{build_dir}/lib/#{g.name}.def"
             open(deffile, 'w') do |f|
-              f.puts [
-                "EXPORTS",
-                "\tGENERATED_TMP_mrb_#{g.name.gsub(/-/, '_')}_gem_init",
-                "\tGENERATED_TMP_mrb_#{g.name.gsub(/-/, '_')}_gem_final",
-              ].join("\n")
+              f.puts %Q[EXPORTS]
+			  f.puts %Q[	gem_mrblib_irep_#{g.name.gsub(/-/, '_')}] unless Dir.glob("#{g.dir}/mrblib/*.rb").empty?
+              f.puts %Q[	mrb_#{g.name.gsub(/-/, '_')}_gem_init"] if objs == [objfile("#{build_dir}/gem_init")]
+              f.puts %Q[	mrb_#{g.name.gsub(/-/, '_')}_gem_final] if objs == [objfile("#{build_dir}/gem_init")]
             end
           else
             deffile = ''

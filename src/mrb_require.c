@@ -331,12 +331,12 @@ mrb_load_irep_data(mrb_state* mrb, const char* data)
 static void
 load_so_file(mrb_state *mrb, mrb_value filepath)
 {
-  int ai;
   char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
   char entry_irep[PATH_MAX] = {0};
   typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
   fn_mrb_gem_init fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
+  const char* data;
   if (!handle) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
@@ -359,19 +359,17 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", ptr);
   snprintf(entry_irep, sizeof(entry_irep)-1, "gem_mrblib_irep_%s", ptr);
   fn = (fn_mrb_gem_init) dlsym(handle, entry);
-  const char* data = (const char *)dlsym(handle, entry_irep);
+  data = (const char *)dlsym(handle, entry_irep);
   free(top);
-  if (fn == NULL) {
-    mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
+
+  if (fn != NULL) {
+    int ai = mrb_gc_arena_save(mrb);
+    fn(mrb);
+    mrb_gc_arena_restore(mrb, ai);
   }
   dlerror(); // clear last error
 
-  ai = mrb_gc_arena_save(mrb);
-  fn(mrb);
-  mrb_gc_arena_restore(mrb, ai);
-
-  if (data != NULL)
-  {
+  if (data != NULL) {
     mrb_load_irep_data(mrb,data);
   }
 }
@@ -401,7 +399,7 @@ unload_so_file(mrb_state *mrb, mrb_value filepath)
     if (*tmp == '-') *tmp = '_';
     tmp++;
   }
-  snprintf(entry, sizeof(entry)-1, "GENERATED_TMP_mrb_%s_gem_final", ptr);
+  snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_final", ptr);
 
   fn = (fn_mrb_gem_final) dlsym(handle, entry);
   free(top);
