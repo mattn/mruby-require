@@ -361,6 +361,9 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   fn = (fn_mrb_gem_init) dlsym(handle, entry);
   data = (const char *)dlsym(handle, entry_irep);
   free(top);
+  if (!fn && !data) {
+      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %s", filepath);
+  }
 
   if (fn != NULL) {
     int ai = mrb_gc_arena_save(mrb);
