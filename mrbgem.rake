@@ -20,13 +20,16 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
           objs << "#{build_dir}/mrbgem/#{g.name}/gem_init.c"
         end
         file sharedlib => objs do |t|
+          has_rb = !Dir.glob("#{g.dir}/mrblib/*.rb").empty?
+          has_c = !Dir.glob(["#{g.dir}/src/*"]).empty?
           if ENV['OS'] == 'Windows_NT'
+            name = g.name.gsub(/-/, '_')
             deffile = "#{build_dir}/lib/#{g.name}.def"
             open(deffile, 'w') do |f|
               f.puts %Q[EXPORTS]
-			  f.puts %Q[	gem_mrblib_irep_#{g.name.gsub(/-/, '_')}] unless Dir.glob("#{g.dir}/mrblib/*.rb").empty?
-              f.puts %Q[	mrb_#{g.name.gsub(/-/, '_')}_gem_init"] if objs == [objfile("#{build_dir}/gem_init")]
-              f.puts %Q[	mrb_#{g.name.gsub(/-/, '_')}_gem_final] if objs == [objfile("#{build_dir}/gem_init")]
+			  f.puts %Q[	gem_mrblib_irep_#{name}] if has_rb
+              f.puts %Q[	mrb_#{name}_gem_init] if has_c
+              f.puts %Q[	mrb_#{name}_gem_final] if has_c
             end
           else
             deffile = ''
