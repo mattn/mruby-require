@@ -66,27 +66,22 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     class Build
       alias_method :old_print_build_summary, :print_build_summary
       def print_build_summary 
+		old_print_build_summary
+
         Rake::Task.tasks.each do |t|
           if t.name =~ /\.so$/
             t.invoke
           end
         end
 
-        puts "================================================"
-        puts "      Config Name: #{@name}"
-        puts " Output Directory: #{self.build_dir}"
-        puts "         Binaries: #{@bins.join(', ')}" unless @bins.empty?
         unless @gems.empty?
-          puts "    Included Gems:"
-          @gems.map(&:name).each do |name|
+          puts "================================================"
+            puts "     Bundled Gems:"
+            @bundled.map(&:name).each do |name|
             puts "             #{name}"
           end
-          puts "     Bundled Gems:"
-          @bundled.map(&:name).each do |name|
-            puts "             #{name}"
-          end
-        end
         puts "================================================"
+        end
         puts
       end
     end
