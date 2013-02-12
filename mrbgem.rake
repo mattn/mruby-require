@@ -15,6 +15,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       gems.reject! {|g| g.name != 'mruby-require' }
       @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
+        ENV["MRUBY_REQUIRE"] += "#{g.name},"
         objs = g.objs ? g.objs : []
         if File.exist?("#{build_dir}/mrbgem/#{g.name}/gem_init.c")
           objs << "#{build_dir}/mrbgem/#{g.name}/gem_init.c"
@@ -27,7 +28,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
             deffile = "#{build_dir}/lib/#{g.name}.def"
             open(deffile, 'w') do |f|
               f.puts %Q[EXPORTS]
-			  f.puts %Q[	gem_mrblib_irep_#{name}] if has_rb
+              f.puts %Q[	gem_mrblib_irep_#{name}] if has_rb
               f.puts %Q[	mrb_#{name}_gem_init] if has_c
               f.puts %Q[	mrb_#{name}_gem_final] if has_c
             end
@@ -37,14 +38,14 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
           options = {
               :flags => [
                   is_vc ? '/DLL' : '-shared',
-                  g.linker.library_paths.flatten.map {|l| is_vc ? "/LIBPATH:#{l}" : "-L#{l}"}].flatten.join(" "),
+                  (g.linker ? g.linker.library_paths : []).flatten.map {|l| is_vc ? "/LIBPATH:#{l}" : "-L#{l}"}].flatten.join(" "),
               :outfile => sharedlib,
               :objs => objs.join(" "),
               :libs => [
                   (is_vc ? '/DEF:' : '') + deffile,
                   libfile("#{build_dir}/lib/libmruby"),
                   libfile("#{build_dir}/lib/libmruby_core"),
-                  g.linker.libraries.flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
+                  (g.linker ? g.linker.libraries : []).flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
               :flags_before_libraries => '',
               :flags_after_libraries => '',
           }
@@ -66,7 +67,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     class Build
       alias_method :old_print_build_summary_for_require, :print_build_summary
       def print_build_summary 
-		old_print_build_summary_for_require
+        old_print_build_summary_for_require
 
         Rake::Task.tasks.each do |t|
           if t.name =~ /\.so$/

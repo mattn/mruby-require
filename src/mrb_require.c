@@ -624,7 +624,6 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
       i += len;
     }
   }
-   
 }
 
 void
