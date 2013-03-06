@@ -62,9 +62,7 @@ realpath(const char *path, char *resolved_path) {
 
 #if defined(_WIN32)
 # define ENV_SEP ';'
-#elif defined(__linux__)
-# define ENV_SEP ':'
-#elif defined(__APPLE__)
+#else
 # define ENV_SEP ':'
 #endif
 
