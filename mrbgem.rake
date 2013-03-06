@@ -23,7 +23,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
         file sharedlib => objs do |t|
           has_rb = !Dir.glob("#{g.dir}/mrblib/*.rb").empty?
           has_c = !Dir.glob(["#{g.dir}/src/*"]).empty?
-          if ENV['OS'] == 'Windows_NT'
+          if RUBY_PLATFORM.downcase == /mswin(?!ce)|mingw|bccwin/
             name = g.name.gsub(/-/, '_')
             deffile = "#{build_dir}/lib/#{g.name}.def"
             open(deffile, 'w') do |f|
@@ -88,7 +88,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   end
 
   spec.cc.include_paths << ["#{build.root}/src"]
-  if ENV['OS'] != 'Windows_NT'
+  if RUBY_PLATFORM.downcase != /mswin(?!ce)|mingw|bccwin/
     spec.linker.libraries << ['dl']
     spec.cc.flags << "-DMRBGEMS_ROOT=\\\"#{File.expand_path top_build_dir}/lib\\\""
   else
