@@ -360,7 +360,7 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   data = (const char *)dlsym(handle, entry_irep);
   free(top);
   if (!fn && !data) {
-      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %s", filepath);
+      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %s", RSTRING_PTR(filepath));
   }
 
   if (fn != NULL) {
