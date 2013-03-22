@@ -73,10 +73,10 @@ realpath(const char *path, char *resolved_path) {
 #endif
 
 #if 0
-  #include <stdarg.h>
-  #define debug(s,...) printf("%s:%d " s, __FILE__, __LINE__,__VA_ARGS__)
+# include <stdarg.h>
+# define debug(s,...) printf("%s:%d " s, __FILE__, __LINE__,__VA_ARGS__)
 #else
-  #define debug(...) ((void)0)
+# define debug(...) ((void)0)
 #endif
 
 extern mrb_value mrb_file_exist(mrb_state *mrb, mrb_value fname);
