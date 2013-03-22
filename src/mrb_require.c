@@ -142,7 +142,7 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
   }
   fclose(fp);
 
-  return mrb_str_new2(mrb, fpath);
+  return mrb_str_new_cstr(mrb, fpath);
 }
 
 static mrb_value
@@ -165,9 +165,9 @@ find_file(mrb_state *mrb, mrb_value filename)
   ext = strrchr(fname, '.');
   exts = mrb_ary_new(mrb);
   if (ext == NULL) {
-    mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".rb"));
-    mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".mrb"));
-    mrb_ary_push(mrb, exts, mrb_str_new2(mrb, ".so"));
+    mrb_ary_push(mrb, exts, mrb_str_new_cstr(mrb, ".rb"));
+    mrb_ary_push(mrb, exts, mrb_str_new_cstr(mrb, ".mrb"));
+    mrb_ary_push(mrb, exts, mrb_str_new_cstr(mrb, ".so"));
   } else {
     mrb_ary_push(mrb, exts, mrb_nil_value());
   }
@@ -185,7 +185,7 @@ find_file(mrb_state *mrb, mrb_value filename)
   /* when a filename start with '.', $: = ['.'] */
   if (*fname == '.') {
     load_path = mrb_ary_new(mrb);
-    mrb_ary_push(mrb, load_path, mrb_str_new2(mrb, "."));
+    mrb_ary_push(mrb, load_path, mrb_str_new_cstr(mrb, "."));
   }
 
   for (i = 0; i < RARRAY_LEN(load_path); i++) {
@@ -431,10 +431,10 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   {
     char tmpfile[PATH_MAX];
     GetTempFileName(NULL, "mruby.", 0, tmpfile);
-    tmpfilepath = mrb_str_new2(mrb, tmpfile);
+    tmpfilepath = mrb_str_new_cstr(mrb, tmpfile);
   }
 #else
-  tmpfilepath = mrb_str_new2(mrb, "/tmp/mruby.");
+  tmpfilepath = mrb_str_new_cstr(mrb, "/tmp/mruby.");
 #endif
   pid = mrb_fixnum_value((int)getpid());
   mrb_str_buf_append(mrb, tmpfilepath, mrb_fix2str(mrb, pid, 10));
