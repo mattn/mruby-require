@@ -11,7 +11,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     if enable_gems?
       top_build_dir = build_dir
       @bundled = gems.uniq {|x| x.name}.clone.reject {|g| g.name == 'mruby-require'}
-      sharedlibs = []
+      sharedlibs = {}
       gems.reject! {|g| g.name != 'mruby-require' }
       @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
@@ -20,6 +20,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
         if File.exist?("#{build_dir}/mrbgem/#{g.name}/gem_init.c")
           objs << "#{build_dir}/mrbgem/#{g.name}/gem_init.c"
         end
+        sharedlibs[sharedlib] = objs
         file sharedlib => objs do |t|
           has_rb = !Dir.glob("#{g.dir}/mrblib/*.rb").empty?
           has_c = !Dir.glob(["#{g.dir}/src/*"]).empty?
@@ -37,10 +38,10 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
           end
           options = {
               :flags => [
-                  is_vc ? '/DLL' : '-shared',
+                  is_vc ? '/DLL' : '-shared -fPIC',
                   (g.linker ? g.linker.library_paths : []).flatten.map {|l| is_vc ? "/LIBPATH:#{l}" : "-L#{l}"}].flatten.join(" "),
               :outfile => sharedlib,
-              :objs => objs.join(" "),
+              :objs => [sharedlibs[t.name]].flatten.join(" "),
               :libs => [
                   (is_vc ? '/DEF:' : '') + deffile,
                   libfile("#{build_dir}/lib/libmruby"),
@@ -54,7 +55,6 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
           sh linker.command + ' ' + (linker.link_options % options)
         end
 
-        sharedlibs << sharedlib
         file sharedlib => libfile("#{top_build_dir}/lib/libmruby")
 
         Rake::Task.tasks << sharedlib
