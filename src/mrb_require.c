@@ -292,7 +292,7 @@ mrb_compile(mrb_state *mrb0, char *tmpfilepath, char *filepath)
   mrb->irep += mrb_fixnum(result);
   debug("**dbg : %d\n", mrb->irep_len - irep_len);
   mrb->irep_len -= irep_len;
-  mrb_dump_irep(mrb, 0, fp);
+  mrb_dump_irep_binary(mrb, 0, 0, fp);
   fclose(fp);
 
   mrb->irep -= mrb_fixnum(result);
