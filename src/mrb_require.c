@@ -310,6 +310,7 @@ mrb_load_irep_data(mrb_state* mrb, const char* data)
   mrb_gc_arena_restore(mrb,ai);
 
   if (n >= 0) {
+    int ai;
     struct RProc *proc;
     mrb_irep *irep = mrb->irep[n];
 
@@ -317,9 +318,9 @@ mrb_load_irep_data(mrb_state* mrb, const char* data)
     proc = mrb_proc_new(mrb, irep);
     proc->target_class = mrb->object_class;
 
-    int arena_idx = mrb_gc_arena_save(mrb);
+    ai = mrb_gc_arena_save(mrb);
     mrb_yield_internal(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
-    mrb_gc_arena_restore(mrb, arena_idx);
+    mrb_gc_arena_restore(mrb, ai);
   } else if (mrb->exc) {
     // fail to load
     longjmp(*(jmp_buf*)mrb->jmp, 1);
