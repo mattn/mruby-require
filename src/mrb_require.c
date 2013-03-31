@@ -130,8 +130,7 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
   }
   debug("filepath: %s\n", RSTRING_PTR(filepath));
 
-  realpath(RSTRING_PTR(filepath), fpath);
-  if (fpath == NULL) {
+  if (realpath(RSTRING_PTR(filepath), fpath) == NULL) {
     return mrb_nil_value();
   }
   debug("fpath: %s\n", fpath);
@@ -303,7 +302,7 @@ mrb_compile(mrb_state *mrb0, char *tmpfilepath, char *filepath)
 }
 
 void
-mrb_load_irep_data(mrb_state* mrb, const char* data)
+mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
 {
   int ai = mrb_gc_arena_save(mrb);
   int n = mrb_read_irep(mrb,data);
@@ -335,7 +334,7 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
   fn_mrb_gem_init fn;
   void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
-  const char* data;
+  const uint8_t* data;
   if (!handle) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
@@ -358,7 +357,7 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   snprintf(entry, sizeof(entry)-1, "mrb_%s_gem_init", ptr);
   snprintf(entry_irep, sizeof(entry_irep)-1, "gem_mrblib_irep_%s", ptr);
   fn = (fn_mrb_gem_init) dlsym(handle, entry);
-  data = (const char *)dlsym(handle, entry_irep);
+  data = (const uint8_t *)dlsym(handle, entry_irep);
   free(top);
   if (!fn && !data) {
       mrb_raisef(mrb, E_LOAD_ERROR, "can't load %S", filepath);
@@ -372,7 +371,7 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   dlerror(); // clear last error
 
   if (data != NULL) {
-    mrb_load_irep_data(mrb,data);
+    mrb_load_irep_data(mrb, data);
   }
 }
 
@@ -422,7 +421,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   {
     FILE *fp = fopen(fpath, "r");
     if (fp == NULL) {
-      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %S", mrb_str_new_cstr(fpath));
+      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %S", filepath);
       return;
     }
     fclose(fp);
@@ -438,7 +437,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   tmpfilepath = mrb_str_new_cstr(mrb, "/tmp/mruby.");
 #endif
   pid = mrb_fixnum_value((int)getpid());
-  mrb_str_buf_append(mrb, tmpfilepath, mrb_fix2str(mrb, pid, 10));
+  mrb_str_buf_append(mrb, tmpfilepath, mrb_fixnum_to_str(mrb, pid, 10));
   debug("tmpfilepath: %s\n", RSTRING_PTR(tmpfilepath));
 
   mrb_compile(mrb, mrb_string_value_ptr(mrb, tmpfilepath),
