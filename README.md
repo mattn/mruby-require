@@ -1,6 +1,7 @@
 # mruby-require
 
 mruby-require adds require support to mruby
+This is based on iij's fork of mruby: https://github.com/iij/mruby
 
 ## install by mrbgems
 ```ruby
@@ -22,4 +23,11 @@ For example, if using mruby-onig-regexp, you should add the following to your co
 ````ruby
 require 'mruby-onig-regexp'
 ````
+
+## Requiring mrbgems in defaults
+Set MRUBY_REQUIRE environment variable as comma separated values like following
+
+```
+MRUBY\_REQUIRE=mruby-onig-regexp,mruby-xquote
+```
 
