@@ -28,6 +28,6 @@ require 'mruby-onig-regexp'
 Set MRUBY_REQUIRE environment variable as comma separated values like following
 
 ```
-MRUBY\_REQUIRE=mruby-onig-regexp,mruby-xquote
+MRUBY_REQUIRE=mruby-onig-regexp,mruby-xquote
 ```
 
