@@ -10,9 +10,9 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   MRuby.each_target do
     if enable_gems?
       top_build_dir = build_dir
-      @bundled = gems.uniq {|x| x.name}.clone.reject {|g| g.name == 'mruby-require'}
+      @bundled = gems.uniq {|x| x.name}.clone.reject {|g| g.dir !~ /^build/ || g.name == 'mruby-require'}
       sharedlibs = {}
-      gems.reject! {|g| g.name != 'mruby-require' }
+      gems.reject! {|g| g.dir =~ /^build/ && g.name != 'mruby-require' }
       @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
         ENV["MRUBY_REQUIRE"] += "#{g.name},"
@@ -59,8 +59,12 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
 
         Rake::Task.tasks << sharedlib
       end
-      libmruby.flatten!.reject! {|l| l =~ /\/mrbgems\//}
-      cc.include_paths.reject! {|l| l =~ /\/mrbgems\// && l !~ /\/mruby-require/}
+      libmruby.flatten!.reject! {|l|
+        @bundled.reject {|g| l.index(g.name) == nil}.size > 0
+      }
+      cc.include_paths.reject! {|l|
+        @bundled.reject {|g| l.index(g.name) == nil}.size > 0
+      }
     end
   end
   module MRuby
