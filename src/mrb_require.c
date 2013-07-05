@@ -66,7 +66,7 @@ realpath(const char *path, char *resolved_path) {
 # define ENV_SEP ':'
 #endif
 
-#define E_LOAD_ERROR (mrb_class_obj_get(mrb, "ScriptError"))
+#define E_LOAD_ERROR (mrb_class_get(mrb, "ScriptError"))
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
