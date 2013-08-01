@@ -10,9 +10,13 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   MRuby.each_target do
     if enable_gems?
       top_build_dir = build_dir
-      @bundled = gems.uniq {|x| x.name}.clone.reject {|g| g.dir !~ /^build/ || g.name == 'mruby-require'}
+      gemlist = []
+      gems.each do |x|
+        gemlist << x
+      end
+      @bundled = gemlist.uniq {|x| x.name}.clone.reject {|g| g.dir !~ /^build/ || g.name == 'mruby-require'}
       sharedlibs = {}
-      gems.reject! {|g| g.dir =~ /^build/ && g.name != 'mruby-require' }
+      gemlist.reject! {|g| g.dir =~ /^build/ && g.name != 'mruby-require' }
       @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
         ENV["MRUBY_REQUIRE"] += "#{g.name},"
@@ -79,7 +83,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
           end
         end
 
-        unless @gems.empty?
+        unless @bundled.empty?
           puts "================================================"
             puts "     Bundled Gems:"
             @bundled.map(&:name).each do |name|
@@ -92,7 +96,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   end
 
   spec.cc.include_paths << ["#{build.root}/src"]
-  if RUBY_PLATFORM.downcase != /mswin(?!ce)|mingw|bccwin/
+  if RUBY_PLATFORM.downcase !~ /mswin(?!ce)|mingw|bccwin/
     spec.linker.libraries << ['dl']
     spec.cc.flags << "-DMRBGEMS_ROOT=\\\"#{File.expand_path top_build_dir}/lib\\\""
   else
