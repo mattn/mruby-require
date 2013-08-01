@@ -216,7 +216,7 @@ replace_stop_with_return(mrb_state *mrb, mrb_irep *irep)
 }
 
 static void
-load_mrb_file_with_filepath(mrb_state *mrb, mrb_value filepath, mrb_value origfilepath)
+load_mrb_file(mrb_state *mrb, mrb_value filepath)
 {
   char *fpath = RSTRING_PTR(filepath);
   int sirep;
@@ -247,7 +247,7 @@ load_mrb_file_with_filepath(mrb_state *mrb, mrb_value filepath, mrb_value origfi
     mrb_irep *irep = mrb->irep[n];
     size_t i;
     for (i = sirep; i < mrb->irep_len; i++) {
-      mrb->irep[i]->filename = mrb_string_value_ptr(mrb, origfilepath);
+      mrb->irep[i]->filename = mrb_string_value_ptr(mrb, filepath);
     }
 
     replace_stop_with_return(mrb, irep);
@@ -261,44 +261,6 @@ load_mrb_file_with_filepath(mrb_state *mrb, mrb_value filepath, mrb_value origfi
     // fail to load
     longjmp(*(jmp_buf*)mrb->jmp, 1);
   }
-}
-
-static void
-load_mrb_file(mrb_state *mrb, mrb_value filepath)
-{
-  load_mrb_file_with_filepath(mrb, filepath, filepath);
-}
-
-static mrb_value
-mrb_compile(mrb_state *mrb0, char *tmpfilepath, char *filepath)
-{
-  mrb_state *mrb = mrb_open();
-  mrbc_context *c;
-  mrb_value result;
-  FILE *fp;
-  int irep_len = mrb->irep_len;
-
-  debug("irep_len=%d\n", mrb->irep_len);
-  fp = fopen(filepath, "r");
-  c = mrbc_context_new(mrb);
-  c->no_exec = 1;
-  c->filename = filepath;
-  result = mrb_load_file_cxt(mrb, fp, c);
-  fclose(fp);
-  debug("result=%d, irep_len=%d\n", mrb_fixnum(result), mrb->irep_len);
-
-  fp = fopen(tmpfilepath, "w");
-  mrb->irep += mrb_fixnum(result);
-  debug("**dbg : %d\n", mrb->irep_len - irep_len);
-  mrb->irep_len -= irep_len;
-  mrb_dump_irep_binary(mrb, 0, 0, fp);
-  fclose(fp);
-
-  mrb->irep -= mrb_fixnum(result);
-  mrb->irep_len += irep_len;
-  mrb_close(mrb);
-
-  return mrb_nil_value();
 }
 
 void
@@ -414,9 +376,8 @@ unload_so_file(mrb_state *mrb, mrb_value filepath)
 static void
 load_rb_file(mrb_state *mrb, mrb_value filepath)
 {
-  mrb_value tmpfilepath;
+  FILE *file;
   char *fpath = RSTRING_PTR(filepath);
-  mrb_value pid;
 
   {
     FILE *fp = fopen(fpath, "r");
@@ -427,24 +388,15 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
     fclose(fp);
   }
 
-#ifdef _WIN32
-  {
-    char tmpfile[PATH_MAX];
-    GetTempFileName(NULL, "mruby.", 0, tmpfile);
-    tmpfilepath = mrb_str_new_cstr(mrb, tmpfile);
-  }
-#else
-  tmpfilepath = mrb_str_new_cstr(mrb, "/tmp/mruby.");
-#endif
-  pid = mrb_fixnum_value((int)getpid());
-  mrb_str_buf_append(mrb, tmpfilepath, mrb_fixnum_to_str(mrb, pid, 10));
-  debug("tmpfilepath: %s\n", RSTRING_PTR(tmpfilepath));
+  mrbc_context *mrbc_ctx = mrbc_context_new(mrb);
 
-  mrb_compile(mrb, mrb_string_value_ptr(mrb, tmpfilepath),
-      mrb_string_value_ptr(mrb, filepath));
-  load_mrb_file_with_filepath(mrb, tmpfilepath, filepath);
+  file = fopen((const char*)fpath, "r");
+  mrbc_filename(mrb, mrbc_ctx, fpath);
+  mrb_gv_set(mrb, mrb_intern2(mrb, "$0", 2), filepath);
+  mrb_load_file_cxt(mrb, file, mrbc_ctx);
+  fclose(file);
 
-  remove(RSTRING_PTR(tmpfilepath));
+  mrbc_context_free(mrb, mrbc_ctx);
 }
 
 static void
@@ -459,7 +411,7 @@ load_file(mrb_state *mrb, mrb_value filepath)
   } else if (strcmp(ext, ".so") == 0) {
     load_so_file(mrb, filepath);
   } else {
-    mrb_raisef(mrb, E_LOAD_ERROR, "Filepath '%S' is invalid extension.", filepath);
+    mrb_raisef(mrb, E_LOAD_ERROR, "Filepath '%S' has invalid extension.", filepath);
     return;
   }
 }
