@@ -14,7 +14,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       gems.each do |x|
         gemlist << x
       end
-      @bundled = gemlist.uniq {|x| x.name}.clone.reject {|g| g.dir !~ /^build/ || g.name == 'mruby-require'}
+      @bundled = gemlist.uniq {|x| x.name}.clone.reject {|g| g.dir !~ /\/build\// || g.name == 'mruby-require'}
       sharedlibs = {}
       gemlist.reject! {|g| g.dir =~ /^build/ && g.name != 'mruby-require' }
       @bundled.each do |g|
