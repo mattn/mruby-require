@@ -378,6 +378,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
 {
   FILE *file;
   char *fpath = RSTRING_PTR(filepath);
+  mrbc_context *mrbc_ctx;
 
   {
     FILE *fp = fopen(fpath, "r");
@@ -388,7 +389,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
     fclose(fp);
   }
 
-  mrbc_context *mrbc_ctx = mrbc_context_new(mrb);
+  mrbc_ctx = mrbc_context_new(mrb);
 
   file = fopen((const char*)fpath, "r");
   mrbc_filename(mrb, mrbc_ctx, fpath);
@@ -522,8 +523,6 @@ mrb_f_require(mrb_state *mrb, mrb_value self)
 
   return mrb_require(mrb, filename);
 }
-
-extern char **environ;
 
 static mrb_value
 mrb_init_load_path(mrb_state *mrb)
