@@ -147,7 +147,7 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
 static mrb_value
 find_file(mrb_state *mrb, mrb_value filename)
 {
-  char *ext;
+  char *ext, *ptr, *tmp;
   mrb_value exts;
   int i, j;
 
@@ -161,7 +161,14 @@ find_file(mrb_state *mrb, mrb_value filename)
     return mrb_undef_value();
   }
 
-  ext = strrchr(fname, '.');
+  tmp = ptr = fname;
+  while (tmp) {
+    if ((tmp = strchr(ptr, '/')) || (tmp = strchr(ptr, '\\'))) {
+      ptr = tmp + 1;
+    }
+  }
+
+  ext = strrchr(ptr, '.');
   exts = mrb_ary_new(mrb);
   if (ext == NULL) {
     mrb_ary_push(mrb, exts, mrb_str_new_cstr(mrb, ".rb"));
