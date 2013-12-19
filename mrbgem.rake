@@ -2,21 +2,53 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   spec.license = 'MIT'
   spec.authors = 'mattn'
   ENV["MRUBY_REQUIRE"] = ""
-  @bundled = []
 
+  module MRuby
+    module Gem
+      class List
+        include Enumerable
+        def reject!(&x)
+          @ary.reject! &x
+        end
+        def uniq(&x)
+          @ary.uniq &x
+        end
+      end
+    end
+    class Build
+      alias_method :old_print_build_summary_for_require, :print_build_summary
+      def print_build_summary 
+        old_print_build_summary_for_require
+
+        Rake::Task.tasks.each do |t|
+          if t.name =~ /\.so$/
+            t.invoke
+          end
+        end
+
+        unless @bundled.empty?
+          puts "================================================"
+            puts "     Bundled Gems:"
+            @bundled.map(&:name).each do |name|
+            puts "             #{name}"
+          end
+          puts "================================================"
+        end
+      end
+    end
+  end
+
+  @bundled = []
   is_vc = ENV['OS'] == 'Windows_NT' && cc.command =~ /^cl(\.exe)?$/
   #cc.defines << "/LD" if is_vc
   top_build_dir = build_dir
   MRuby.each_target do
     if enable_gems?
       top_build_dir = build_dir
-      gemlist = []
-      gems.each do |x|
-        gemlist << x
-      end
-      @bundled = gemlist.uniq {|x| x.name}.clone.reject {|g| g.authors == 'mruby developers' || g.name == 'mruby-require'}
+      @bundled = gems.uniq {|x| x.name}.clone.reject {|g| g.authors == 'mruby developers' || g.name == 'mruby-require'}
       sharedlibs = {}
-      gemlist.reject! {|g| g.authors == 'mruby developers' }
+      gems.reject! {|g| g.authors != 'mruby developers' && g.name != 'mruby-require'}
+
       @bundled.each do |g|
         sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
         ENV["MRUBY_REQUIRE"] += "#{g.name},"
@@ -69,29 +101,6 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       cc.include_paths.reject! {|l|
         @bundled.reject {|g| l.index(g.name) == nil}.size > 0
       }
-    end
-  end
-  module MRuby
-    class Build
-      alias_method :old_print_build_summary_for_require, :print_build_summary
-      def print_build_summary 
-        old_print_build_summary_for_require
-
-        Rake::Task.tasks.each do |t|
-          if t.name =~ /\.so$/
-            t.invoke
-          end
-        end
-
-        unless @bundled.empty?
-          puts "================================================"
-            puts "     Bundled Gems:"
-            @bundled.map(&:name).each do |name|
-            puts "             #{name}"
-          end
-          puts "================================================"
-        end
-      end
     end
   end
 
