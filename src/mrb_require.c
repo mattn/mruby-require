@@ -153,7 +153,7 @@ find_file(mrb_state *mrb, mrb_value filename)
 
   char *fname = RSTRING_PTR(filename);
   mrb_value filepath = mrb_nil_value();
-  mrb_value load_path = mrb_obj_dup(mrb, mrb_gv_get(mrb, mrb_intern(mrb, "$:")));
+  mrb_value load_path = mrb_obj_dup(mrb, mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$:")));
   load_path = mrb_check_array_type(mrb, load_path);
 
   if(mrb_nil_p(load_path)) {
@@ -226,10 +226,9 @@ static void
 load_mrb_file(mrb_state *mrb, mrb_value filepath)
 {
   char *fpath = RSTRING_PTR(filepath);
-  int sirep;
   int arena_idx;
   FILE *fp;
-  int n;
+  mrb_irep *irep;
 
   {
     FILE *fp = fopen(fpath, "r");
@@ -240,22 +239,22 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
     fclose(fp);
   }
 
-  sirep = mrb->irep_len;
   arena_idx = mrb_gc_arena_save(mrb);
 
   fp = fopen(fpath, "r");
-  n = mrb_read_irep_file(mrb, fp);
+  irep = mrb_read_irep_file(mrb, fp);
   fclose(fp);
 
   mrb_gc_arena_restore(mrb, arena_idx);
 
-  if (n >= 0) {
+  if (irep) {
     struct RProc *proc;
-    mrb_irep *irep = mrb->irep[n];
+    /*
     size_t i;
     for (i = sirep; i < mrb->irep_len; i++) {
       mrb->irep[i]->filename = mrb_string_value_ptr(mrb, filepath);
     }
+    */
 
     replace_stop_with_return(mrb, irep);
     proc = mrb_proc_new(mrb, irep);
@@ -274,13 +273,12 @@ void
 mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
 {
   int ai = mrb_gc_arena_save(mrb);
-  int n = mrb_read_irep(mrb,data);
+  mrb_irep *irep = mrb_read_irep(mrb,data);
   mrb_gc_arena_restore(mrb,ai);
 
-  if (n >= 0) {
+  if (irep) {
     int ai;
     struct RProc *proc;
-    mrb_irep *irep = mrb->irep[n];
 
     replace_stop_with_return(mrb, irep);
     proc = mrb_proc_new(mrb, irep);
@@ -400,7 +398,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
 
   file = fopen((const char*)fpath, "r");
   mrbc_filename(mrb, mrbc_ctx, fpath);
-  mrb_gv_set(mrb, mrb_intern2(mrb, "$0", 2), filepath);
+  mrb_gv_set(mrb, mrb_intern(mrb, "$0", 2), filepath);
   mrb_load_file_cxt(mrb, file, mrbc_ctx);
   fclose(file);
 
@@ -450,7 +448,7 @@ static int
 loaded_files_check(mrb_state *mrb, mrb_value filepath)
 {
   mrb_value loading_files;
-  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\""));
+  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
   int i;
   for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
     if (mrb_str_cmp(
@@ -461,7 +459,7 @@ loaded_files_check(mrb_state *mrb, mrb_value filepath)
     }
   }
 
-  loading_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\"_"));
+  loading_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\"_"));
   if (mrb_nil_p(loading_files)) {
     return 1;
   }
@@ -480,13 +478,13 @@ loaded_files_check(mrb_state *mrb, mrb_value filepath)
 static void
 loading_files_add(mrb_state *mrb, mrb_value filepath)
 {
-  mrb_value loading_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\"_"));
+  mrb_value loading_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\"_"));
   if (mrb_nil_p(loading_files)) {
     loading_files = mrb_ary_new(mrb);
   }
   mrb_ary_push(mrb, loading_files, filepath);
 
-  mrb_gv_set(mrb, mrb_intern(mrb, "$\"_"), loading_files);
+  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\"_"), loading_files);
 
   return;
 }
@@ -494,10 +492,10 @@ loading_files_add(mrb_state *mrb, mrb_value filepath)
 static void
 loaded_files_add(mrb_state *mrb, mrb_value filepath)
 {
-  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\""));
+  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
   mrb_ary_push(mrb, loaded_files, filepath);
 
-  mrb_gv_set(mrb, mrb_intern(mrb, "$\""), loaded_files);
+  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), loaded_files);
 
   return;
 }
@@ -558,8 +556,8 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, krn, "load",    mrb_f_load,    ARGS_REQ(1));
   mrb_define_method(mrb, krn, "require", mrb_f_require, ARGS_REQ(1));
 
-  mrb_gv_set(mrb, mrb_intern(mrb, "$:"), mrb_init_load_path(mrb));
-  mrb_gv_set(mrb, mrb_intern(mrb, "$\""), mrb_ary_new(mrb));
+  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$:"), mrb_init_load_path(mrb));
+  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), mrb_ary_new(mrb));
 
   env = getenv("MRUBY_REQUIRE");
   if (env != NULL) {
@@ -583,7 +581,7 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
 void
 mrb_mruby_require_gem_final(mrb_state* mrb)
 {
-  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern(mrb, "$\""));
+  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
   int i;
   for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
     mrb_value f = mrb_ary_entry(loaded_files, i);
