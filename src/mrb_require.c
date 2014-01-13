@@ -150,6 +150,7 @@ find_file(mrb_state *mrb, mrb_value filename)
   char *ext, *ptr, *tmp;
   mrb_value exts;
   int i, j;
+  FILE *fp;
 
   char *fname = RSTRING_PTR(filename);
   mrb_value filepath = mrb_nil_value();
@@ -178,9 +179,20 @@ find_file(mrb_state *mrb, mrb_value filename)
     mrb_ary_push(mrb, exts, mrb_nil_value());
   }
 
+  /* Absolute paths on Windows */
+#ifdef _WIN32
+  if (fname[1] == ':') {
+    fp = fopen(fname, "r");
+    if (fp == NULL) {
+      return mrb_nil_value();
+    }
+    fclose(fp);
+    return filename;
+  }
+#endif  
   /* when absolute path */
   if (*fname == '/') {
-    FILE *fp = fopen(fname, "r");
+    fp = fopen(fname, "r");
     if (fp == NULL) {
       return mrb_nil_value();
     }
