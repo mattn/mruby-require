@@ -189,7 +189,7 @@ find_file(mrb_state *mrb, mrb_value filename)
     fclose(fp);
     return filename;
   }
-#endif  
+#endif
   /* when absolute path */
   if (*fname == '/') {
     fp = fopen(fname, "r");
@@ -518,8 +518,8 @@ mrb_require(mrb_state *mrb, mrb_value filename)
   mrb_value filepath = find_file(mrb, filename);
   if (!mrb_nil_p(filepath) && loaded_files_check(mrb, filepath)) {
 
-    loading_files_add(mrb, filepath); 
-    load_file(mrb, filepath);  
+    loading_files_add(mrb, filepath);
+    load_file(mrb, filepath);
     loaded_files_add(mrb, filepath);
     return mrb_true_value();
   }
