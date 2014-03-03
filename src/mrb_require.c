@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <limits.h>
+#include <setjmp.h>
 #ifdef _MSC_VER
 #define PATH_MAX MAX_PATH
 #define strdup(x) _strdup(x)
@@ -66,7 +67,7 @@ realpath(const char *path, char *resolved_path) {
 # define ENV_SEP ':'
 #endif
 
-#define E_LOAD_ERROR (mrb_class_get(mrb, "ScriptError"))
+#define E_LOAD_ERROR (mrb_module_get(mrb, "ScriptError"))
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
@@ -189,7 +190,7 @@ find_file(mrb_state *mrb, mrb_value filename)
     fclose(fp);
     return filename;
   }
-#endif  
+#endif
   /* when absolute path */
   if (*fname == '/') {
     fp = fopen(fname, "r");
@@ -518,8 +519,8 @@ mrb_require(mrb_state *mrb, mrb_value filename)
   mrb_value filepath = find_file(mrb, filename);
   if (!mrb_nil_p(filepath) && loaded_files_check(mrb, filepath)) {
 
-    loading_files_add(mrb, filepath); 
-    load_file(mrb, filepath);  
+    loading_files_add(mrb, filepath);
+    load_file(mrb, filepath);
     loaded_files_add(mrb, filepath);
     return mrb_true_value();
   }
