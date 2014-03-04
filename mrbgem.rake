@@ -4,4 +4,10 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   ENV["MRUBY_REQUIRE"] = ""
 
   spec.cc.include_paths << "#{MRUBY_ROOT}/src"
+  
+  case RUBY_PLATFORM
+  when /linux/
+    spec.linker.libraries += ['dl']
+  end
+  
 end

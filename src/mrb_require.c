@@ -27,6 +27,7 @@
 #include <sys/param.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <dlfcn.h>
 #endif
 
 #ifdef _WIN32
