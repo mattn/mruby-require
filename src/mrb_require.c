@@ -246,7 +246,7 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
   mrb_irep *irep;
 
   {
-    FILE *fp = fopen(fpath, "r");
+    FILE *fp = fopen(fpath, "rb");
     if (fp == NULL) {
       mrb_raisef(mrb, E_LOAD_ERROR, "can't load %S", mrb_str_new_cstr(mrb, fpath));
       return;
@@ -256,7 +256,7 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
 
   arena_idx = mrb_gc_arena_save(mrb);
 
-  fp = fopen(fpath, "r");
+  fp = fopen(fpath, "rb");
   irep = mrb_read_irep_file(mrb, fp);
   fclose(fp);
 
