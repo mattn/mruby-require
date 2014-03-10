@@ -102,6 +102,6 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     spec.linker.libraries << ['dl']
     spec.cc.flags << "-DMRBGEMS_ROOT=\\\"#{File.expand_path top_build_dir}/lib\\\""
   else
-    spec.cc.flags << "-DMRBGEMS_ROOT=\"\"\"#{File.expand_path top_build_dir}/lib\"\"\""
+    spec.cc.flags << "-DMRBGEMS_ROOT=\"\"\\\"#{File.expand_path top_build_dir}/lib\\\"\"\""
   end
 end
