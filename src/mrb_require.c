@@ -17,6 +17,7 @@
 #include "opcode.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <setjmp.h>
 #include <sys/types.h>
 #include <limits.h>
 #include <setjmp.h>
