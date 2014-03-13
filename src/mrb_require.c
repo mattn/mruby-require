@@ -20,6 +20,7 @@
 #include <setjmp.h>
 #include <sys/types.h>
 #include <limits.h>
+#include <setjmp.h>
 #ifdef _MSC_VER
 #define PATH_MAX MAX_PATH
 #define strdup(x) _strdup(x)
@@ -27,6 +28,7 @@
 #include <sys/param.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <dlfcn.h>
 #endif
 
 #ifdef _WIN32
@@ -185,7 +187,7 @@ find_file(mrb_state *mrb, mrb_value filename)
   if (fname[1] == ':') {
     fp = fopen(fname, "r");
     if (fp == NULL) {
-      return mrb_nil_value();
+      goto not_found;
     }
     fclose(fp);
     return filename;
@@ -195,7 +197,7 @@ find_file(mrb_state *mrb, mrb_value filename)
   if (*fname == '/') {
     fp = fopen(fname, "r");
     if (fp == NULL) {
-      return mrb_nil_value();
+      goto not_found;
     }
     fclose(fp);
     return filename;
@@ -220,6 +222,7 @@ find_file(mrb_state *mrb, mrb_value filename)
     }
   }
 
+not_found:
   mrb_raisef(mrb, E_LOAD_ERROR, "cannot load such file -- %S", filename);
   return mrb_nil_value();
 }
