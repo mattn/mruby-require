@@ -52,14 +52,20 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     compiled_in = gems_uniq[0..mr_position].map {|g| g.name}
     @bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name) or g.name == 'mruby-require'}
     gems.reject! {|g| !compiled_in.include?(g.name)}
-
+    libmruby_libs      = []
+    libmruby_lib_paths = []
+    gems_uniq.each do |g|
+      g.setup unless g.name == "mruby-require"
+      libmruby_libs      += g.linker.libraries
+      libmruby_lib_paths += g.linker.library_paths
+    end
     @bundled.each do |g|
-      g.setup
       next if g.objs.nil? or g.objs.empty?
       ENV["MRUBY_REQUIRE"] += "#{g.name},"
       sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
       file sharedlib => g.objs do |t|
         if RUBY_PLATFORM.downcase =~ /mswin(?!ce)|mingw|bccwin/
+          libmruby_libs += %w(msvcrt kernel32 user32 gdi32 winspool comdlg32)
           name = g.name.gsub(/-/, '_')
           has_rb = !Dir.glob("#{g.dir}/mrblib/*.rb").empty?
           has_c = !Dir.glob(["#{g.dir}/src/*"]).empty?
@@ -76,14 +82,14 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
         options = {
             :flags => [
                 is_vc ? '/DLL' : is_mingw ? '-shared' : '-shared -fPIC',
-                (g.linker ? g.linker.library_paths : []).flatten.map {|l| is_vc ? "/LIBPATH:#{l}" : "-L#{l}"}].flatten.join(" "),
+                (libmruby_lib_paths + (g.linker ? g.linker.library_paths : [])).flatten.map {|l| is_vc ? "/LIBPATH:#{l}" : "-L#{l}"}].flatten.join(" "),
             :outfile => sharedlib,
             :objs => g.objs.flatten.join(" "),
             :libs => [
                 (is_vc ? '/DEF:' : '') + deffile,
                 libfile("#{build_dir}/lib/libmruby"),
                 libfile("#{build_dir}/lib/libmruby_core"),
-                (g.linker ? g.linker.libraries : []).flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
+                (libmruby_libs + (g.linker ? g.linker.libraries : [])).flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
             :flags_before_libraries => '',
             :flags_after_libraries => '',
         }
