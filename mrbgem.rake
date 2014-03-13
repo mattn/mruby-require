@@ -47,10 +47,14 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     top_build_dir = build_dir
     # Only gems included AFTER the mruby-require gem during compilation are 
     # compiled as separate objects.
-    @bundled = gems.drop_while {|b| b.name != "mruby-require"}
-    @bundled.reject! {|b| b.name == 'mruby-require'}
-    gems.reject! {|g| @bundled.find {|b| b.name == g.name}}
+    gems_uniq   = gems.uniq {|x| x.name}
+    mr_position = gems_uniq.find_index {|g| g.name == "mruby-require"}
+    compiled_in = gems_uniq[0..mr_position].map {|g| g.name}
+    @bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name) or g.name == 'mruby-require'}
+    gems.reject! {|g| !compiled_in.include?(g.name)}
+
     @bundled.each do |g|
+      g.setup
       next if g.objs.nil? or g.objs.empty?
       ENV["MRUBY_REQUIRE"] += "#{g.name},"
       sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
