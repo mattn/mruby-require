@@ -45,9 +45,11 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   MRuby.each_target do
     next unless enable_gems?
     top_build_dir = build_dir
-    @bundled = gems.uniq {|x| x.name}.clone.reject {|g| g.authors == 'mruby developers' or g.name == 'mruby-require' or g.objs.nil? or g.objs.empty? }
-    gems.reject! {|g| g.authors != 'mruby developers' && g.name != 'mruby-require'}
-
+    # Only gems included AFTER the mruby-require gem during compilation are 
+    # compiled as separate objects.
+    @bundled = gems.drop_while {|b| b.name != "mruby-require"}
+    @bundled.reject! {|b| b.name == 'mruby-require'}
+    gems.reject! {|g| @bundled.find {|b| b.name == g.name}}
     @bundled.each do |g|
       next if g.objs.nil? or g.objs.empty?
       ENV["MRUBY_REQUIRE"] += "#{g.name},"
