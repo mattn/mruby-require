@@ -52,9 +52,12 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     compiled_in = gems_uniq[0..mr_position].map {|g| g.name}
     @bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name) or g.name == 'mruby-require'}
     gems.reject! {|g| !compiled_in.include?(g.name)}
-
+    libmruby_libs = []
+    gems_uniq.each do |g|
+      g.setup unless g.name == "mruby-require"
+      libmruby_libs += g.linker.libraries
+    end
     @bundled.each do |g|
-      g.setup
       next if g.objs.nil? or g.objs.empty?
       ENV["MRUBY_REQUIRE"] += "#{g.name},"
       sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
@@ -83,7 +86,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
                 (is_vc ? '/DEF:' : '') + deffile,
                 libfile("#{build_dir}/lib/libmruby"),
                 libfile("#{build_dir}/lib/libmruby_core"),
-                (g.linker ? g.linker.libraries : []).flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
+                (libmruby_libs + (g.linker ? g.linker.libraries : [])).flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
             :flags_before_libraries => '',
             :flags_after_libraries => '',
         }
