@@ -21,8 +21,10 @@
 #include <sys/types.h>
 #include <limits.h>
 #include <setjmp.h>
-#ifdef _MSC_VER
-#define PATH_MAX MAX_PATH
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#ifndef PATH_MAX
+# define PATH_MAX MAX_PATH
+#endif
 #define strdup(x) _strdup(x)
 #else
 #include <sys/param.h>
