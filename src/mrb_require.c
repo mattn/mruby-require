@@ -86,10 +86,6 @@ realpath(const char *path, char *resolved_path) {
 
 extern mrb_value mrb_file_exist(mrb_state *mrb, mrb_value fname);
 
-/* mrb_yield_internal was exposed and renamed to mrb_yield_with_class
-   use a define here for compatibility, to be removed later */
-#define mrb_yield_internal mrb_yield_with_class
-
 static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
 {
@@ -280,7 +276,7 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
     proc->target_class = mrb->object_class;
 
     arena_idx = mrb_gc_arena_save(mrb);
-    mrb_yield_internal(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
+    mrb_yield_with_class(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
     mrb_gc_arena_restore(mrb, arena_idx);
   } else if (mrb->exc) {
     // fail to load
@@ -304,7 +300,7 @@ mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
     proc->target_class = mrb->object_class;
 
     ai = mrb_gc_arena_save(mrb);
-    mrb_yield_internal(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
+    mrb_yield_with_class(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
     mrb_gc_arena_restore(mrb, ai);
   } else if (mrb->exc) {
     // fail to load
