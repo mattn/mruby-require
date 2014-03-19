@@ -86,8 +86,9 @@ realpath(const char *path, char *resolved_path) {
 
 extern mrb_value mrb_file_exist(mrb_state *mrb, mrb_value fname);
 
-mrb_value
-mrb_yield_internal(mrb_state *mrb, mrb_value b, int argc, mrb_value *argv, mrb_value self, struct RClass *c);
+/* mrb_yield_internal was exposed and renamed to mrb_yield_with_class
+   use a define here for compatibility, to be removed later */
+#define mrb_yield_internal mrb_yield_with_class
 
 static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
