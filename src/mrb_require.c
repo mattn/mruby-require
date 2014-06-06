@@ -423,10 +423,10 @@ load_file(mrb_state *mrb, mrb_value filepath)
 {
   char *ext = strrchr(RSTRING_PTR(filepath), '.');
 
-  if (strcmp(ext, ".mrb") == 0) {
-    load_mrb_file(mrb, filepath);
-  } else if (strcmp(ext, ".rb") == 0) {
+  if (!ext || strcmp(ext, ".rb") == 0) {
     load_rb_file(mrb, filepath);
+  } else if (strcmp(ext, ".mrb") == 0) {
+    load_mrb_file(mrb, filepath);
   } else if (strcmp(ext, ".so") == 0) {
     load_so_file(mrb, filepath);
   } else {
