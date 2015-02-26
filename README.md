@@ -1,5 +1,7 @@
 # mruby-require
 
+[![Build Status](https://travis-ci.org/mattn/mruby-require.svg)](https://travis-ci.org/mattn/mruby-require)
+
 mruby-require adds require support to mruby
 This is based on iij's fork of mruby: https://github.com/iij/mruby
 
