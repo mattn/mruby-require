@@ -84,8 +84,6 @@ realpath(const char *path, char *resolved_path) {
 # define debug(...) ((void)0)
 #endif
 
-extern mrb_value mrb_file_exist(mrb_state *mrb, mrb_value fname);
-
 static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
 {
@@ -284,7 +282,7 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
   }
 }
 
-void
+static void
 mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
 {
   int ai = mrb_gc_arena_save(mrb);
@@ -425,11 +423,11 @@ load_file(mrb_state *mrb, mrb_value filepath)
 {
   char *ext = strrchr(RSTRING_PTR(filepath), '.');
 
-  if (strcmp(ext, ".mrb") == 0) {
-    load_mrb_file(mrb, filepath);
-  } else if (strcmp(ext, ".rb") == 0) {
+  if (!ext || strcmp(ext, ".rb") == 0) {
     load_rb_file(mrb, filepath);
-  } else if (strcmp(ext, ".so") == 0 || strcmp(ext, ".dylib") == 0 || strcmp(ext, ".dll") == 0) {
+  } else if (strcmp(ext, ".mrb") == 0) {
+    load_mrb_file(mrb, filepath);
+  } else if (strcmp(ext, ".so") == 0) {
     load_so_file(mrb, filepath);
   } else {
     mrb_raisef(mrb, E_LOAD_ERROR, "Filepath '%S' has invalid extension.", filepath);

@@ -11,7 +11,9 @@ module MRuby
     end
   end
   class Build
-    alias_method :old_print_build_summary_for_require, :print_build_summary
+    unless method_defined?(:old_print_build_summary_for_require)
+      alias_method :old_print_build_summary_for_require, :print_build_summary
+    end
     def print_build_summary 
       old_print_build_summary_for_require
 
@@ -38,26 +40,30 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   spec.authors = 'mattn'
   ENV["MRUBY_REQUIRE"] = ""
 
-  @bundled = []
   is_vc = ENV['OS'] == 'Windows_NT' && cc.command =~ /^cl(\.exe)?$/
   is_mingw = ENV['OS'] == 'Windows_NT' && cc.command =~ /^gcc(.*\.exe)?$/
   top_build_dir = build_dir
   MRuby.each_target do
+    next if @bundled
+    @bundled = []
     next unless enable_gems?
     top_build_dir = build_dir
     # Only gems included AFTER the mruby-require gem during compilation are 
     # compiled as separate objects.
     gems_uniq   = gems.uniq {|x| x.name}
     mr_position = gems_uniq.find_index {|g| g.name == "mruby-require"}
+    mr_position = -1 if mr_position.nil?
     compiled_in = gems_uniq[0..mr_position].map {|g| g.name}
     @bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name) or g.name == 'mruby-require'}
     gems.reject! {|g| !compiled_in.include?(g.name)}
     libmruby_libs      = []
     libmruby_lib_paths = []
     gems_uniq.each do |g|
-      g.setup unless g.name == "mruby-require"
-      libmruby_libs      += g.linker.libraries
-      libmruby_lib_paths += g.linker.library_paths
+      unless g.name == "mruby-require"
+        g.setup 
+        libmruby_libs      += g.linker.libraries
+        libmruby_lib_paths += g.linker.library_paths
+      end
     end
     @bundled.each do |g|
       next if g.objs.nil? or g.objs.empty?
