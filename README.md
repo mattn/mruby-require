@@ -31,3 +31,6 @@ Set MRUBY_REQUIRE environment variable as comma separated values like following
 MRUBY_REQUIRE=mruby-onig-regexp,mruby-xquote
 ```
 
+## License
+
+MIT
