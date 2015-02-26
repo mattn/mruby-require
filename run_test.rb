@@ -11,6 +11,7 @@ end
 
 MRuby::Build.new do |conf|
   toolchain :clang
+  conf.cc.flags << ["-fPIC"]
   conf.gembox 'default'
   conf.gem File.dirname(File.expand_path(__FILE__))
   conf.gem :github => 'mattn/mruby-curl'
