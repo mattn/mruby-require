@@ -56,8 +56,8 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     compiled_in = gems_uniq[0..mr_position].map {|g| g.name}
     @bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name) or g.name == 'mruby-require'}
     gems.reject! {|g| !compiled_in.include?(g.name)}
-    libmruby_libs      = []
-    libmruby_lib_paths = []
+    libmruby_libs      = MRuby.targets["host"].linker.libraries
+    libmruby_lib_paths = MRuby.targets["host"].linker.library_paths
     gems_uniq.each do |g|
       unless g.name == "mruby-require"
         g.setup 
