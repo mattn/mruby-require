@@ -115,7 +115,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     end
   end
 
-  spec.cc.include_paths << ["#{build.root}/src"]
+  spec.cc.include_paths << ["#{MRUBY_ROOT}/src"]
   if RUBY_PLATFORM.downcase !~ /mswin(?!ce)|mingw|bccwin/
     spec.linker.libraries << ['dl']
     spec.cc.flags << "-DMRBGEMS_ROOT=\\\"#{File.expand_path top_build_dir}/lib\\\""
