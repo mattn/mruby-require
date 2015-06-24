@@ -575,8 +575,8 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
   struct RClass *krn;
   krn = mrb->kernel_module;
 
-  mrb_define_method(mrb, krn, "load",    mrb_f_load,    ARGS_REQ(1));
-  mrb_define_method(mrb, krn, "require", mrb_f_require, ARGS_REQ(1));
+  mrb_define_method(mrb, krn, "load",    mrb_f_load,    MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, krn, "require", mrb_f_require, MRB_ARGS_REQ(1));
 
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$:"), mrb_init_load_path(mrb));
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), mrb_ary_new(mrb));
