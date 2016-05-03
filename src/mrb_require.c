@@ -418,7 +418,6 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
 
   file = fopen((const char*)fpath, "r");
   mrbc_filename(mrb, mrbc_ctx, fpath);
-  mrb_gv_set(mrb, mrb_intern(mrb, "$0", 2), filepath);
   mrb_load_file_cxt(mrb, file, mrbc_ctx);
   fclose(file);
 
