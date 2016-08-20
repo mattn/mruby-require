@@ -71,7 +71,7 @@ realpath(const char *path, char *resolved_path) {
 # define ENV_SEP ':'
 #endif
 
-#define E_LOAD_ERROR (mrb_class_get(mrb, "ScriptError"))
+#define E_LOAD_ERROR (mrb_class_get(mrb, "LoadError"))
 
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
@@ -576,6 +576,8 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
 
   mrb_define_method(mrb, krn, "load",    mrb_f_load,    MRB_ARGS_REQ(1));
   mrb_define_method(mrb, krn, "require", mrb_f_require, MRB_ARGS_REQ(1));
+
+  mrb_define_class(mrb, "LoadError", E_SCRIPT_ERROR);
 
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$:"), mrb_init_load_path(mrb));
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), mrb_ary_new(mrb));
