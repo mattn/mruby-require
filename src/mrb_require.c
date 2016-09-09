@@ -85,10 +85,13 @@ realpath(const char *path, char *resolved_path) {
 #endif
 
 static void
-raise_loaderror(mrb_state *mrb, mrb_value path, mrb_value mesg)
+mrb_load_fail(mrb_state *mrb, mrb_value path, const char *err)
 {
-  mrb_value exc;
+  mrb_value mesg, exc;
 
+  mesg = mrb_str_new_cstr(mrb, err);
+  mrb_str_cat_lit(mrb, mesg, " -- ");
+  mrb_str_cat_str(mrb, mesg, path);
   exc = mrb_funcall(mrb, mrb_obj_value(E_LOAD_ERROR), "new", 1, mesg);
   mrb_iv_set(mrb, exc, mrb_intern_lit(mrb, "path"), path);
 
@@ -231,7 +234,7 @@ find_file(mrb_state *mrb, mrb_value filename)
   }
 
 not_found:
-  raise_loaderror(mrb, filename, mrb_format(mrb, "cannot load such file -- %S", filename));
+  mrb_load_fail(mrb, filename, "cannot load such file");
   return mrb_nil_value();
 }
 
@@ -264,10 +267,10 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
   {
     FILE *fp = fopen(fpath, "rb");
     if (fp == NULL) {
-      raise_loaderror(
+      mrb_load_fail(
         mrb,
         mrb_str_new_cstr(mrb, fpath),
-        mrb_format(mrb, "can't load %S", mrb_str_new_cstr(mrb, fpath))
+        "cannot load such file"
       );
       return;
     }
@@ -362,7 +365,7 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   data = (const uint8_t *)dlsym(handle, entry_irep);
   free(top);
   if (!fn && !data) {
-      raise_loaderror(mrb, filepath, mrb_format(mrb, "can't load %S", filepath));
+      mrb_load_fail(mrb, filepath, "cannot load such file");
   }
 
   if (fn != NULL) {
@@ -423,7 +426,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   {
     FILE *fp = fopen(fpath, "r");
     if (fp == NULL) {
-      raise_loaderror(mrb, filepath, mrb_format(mrb, "can't load %S", filepath));
+      mrb_load_fail(mrb, filepath, "cannot load such file");
       return;
     }
     fclose(fp);
