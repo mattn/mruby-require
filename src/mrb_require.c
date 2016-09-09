@@ -84,6 +84,20 @@ realpath(const char *path, char *resolved_path) {
 # define debug(...) ((void)0)
 #endif
 
+static void
+mrb_load_fail(mrb_state *mrb, mrb_value path, const char *err)
+{
+  mrb_value mesg, exc;
+
+  mesg = mrb_str_new_cstr(mrb, err);
+  mrb_str_cat_lit(mrb, mesg, " -- ");
+  mrb_str_cat_str(mrb, mesg, path);
+  exc = mrb_funcall(mrb, mrb_obj_value(E_LOAD_ERROR), "new", 1, mesg);
+  mrb_iv_set(mrb, exc, mrb_intern_lit(mrb, "path"), path);
+
+  mrb_exc_raise(mrb, exc);
+}
+
 static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
 {
@@ -220,7 +234,7 @@ find_file(mrb_state *mrb, mrb_value filename)
   }
 
 not_found:
-  mrb_raisef(mrb, E_LOAD_ERROR, "cannot load such file -- %S", filename);
+  mrb_load_fail(mrb, filename, "cannot load such file");
   return mrb_nil_value();
 }
 
@@ -253,7 +267,11 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
   {
     FILE *fp = fopen(fpath, "rb");
     if (fp == NULL) {
-      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %S", mrb_str_new_cstr(mrb, fpath));
+      mrb_load_fail(
+        mrb,
+        mrb_str_new_cstr(mrb, fpath),
+        "cannot load such file"
+      );
       return;
     }
     fclose(fp);
@@ -347,7 +365,7 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   data = (const uint8_t *)dlsym(handle, entry_irep);
   free(top);
   if (!fn && !data) {
-      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %S", filepath);
+      mrb_load_fail(mrb, filepath, "cannot load such file");
   }
 
   if (fn != NULL) {
@@ -408,7 +426,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   {
     FILE *fp = fopen(fpath, "r");
     if (fp == NULL) {
-      mrb_raisef(mrb, E_LOAD_ERROR, "can't load %S", filepath);
+      mrb_load_fail(mrb, filepath, "cannot load such file");
       return;
     }
     fclose(fp);
@@ -567,17 +585,25 @@ mrb_init_load_path(mrb_state *mrb)
   return ary;
 }
 
+static mrb_value
+mrb_load_error_path(mrb_state *mrb, mrb_value self)
+{
+  return mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "path"));
+}
+
 void
 mrb_mruby_require_gem_init(mrb_state* mrb)
 {
   char *env;
   struct RClass *krn;
   krn = mrb->kernel_module;
+  struct RClass *load_error;
 
   mrb_define_method(mrb, krn, "load",    mrb_f_load,    MRB_ARGS_REQ(1));
   mrb_define_method(mrb, krn, "require", mrb_f_require, MRB_ARGS_REQ(1));
 
-  mrb_define_class(mrb, "LoadError", E_SCRIPT_ERROR);
+  load_error = mrb_define_class(mrb, "LoadError", E_SCRIPT_ERROR);
+  mrb_define_method(mrb, load_error, "path", mrb_load_error_path, MRB_ARGS_NONE());
 
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$:"), mrb_init_load_path(mrb));
   mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), mrb_ary_new(mrb));
