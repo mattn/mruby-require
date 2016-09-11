@@ -456,8 +456,7 @@ load_file(mrb_state *mrb, mrb_value filepath)
              strcmp(ext, ".dylib") == 0) {
     load_so_file(mrb, filepath);
   } else {
-    mrb_raisef(mrb, E_LOAD_ERROR, "Filepath '%S' has invalid extension.", filepath);
-    return;
+    load_rb_file(mrb, filepath);
   }
 }
 
