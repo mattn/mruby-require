@@ -60,7 +60,10 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     libmruby_lib_paths = MRuby.targets["host"].linker.library_paths
     gems_uniq.each do |g|
       unless g.name == "mruby-require"
-        g.setup 
+        begin
+          g.setup
+        rescue
+        end
         libmruby_libs      += g.linker.libraries
         libmruby_lib_paths += g.linker.library_paths
       end
