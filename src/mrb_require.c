@@ -519,10 +519,9 @@ loading_files_add(mrb_state *mrb, mrb_value filepath)
   mrb_value loading_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\"_"));
   if (mrb_nil_p(loading_files)) {
     loading_files = mrb_ary_new(mrb);
+    mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\"_"), loading_files);
   }
   mrb_ary_push(mrb, loading_files, filepath);
-
-  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\"_"), loading_files);
 
   return;
 }
@@ -532,9 +531,6 @@ loaded_files_add(mrb_state *mrb, mrb_value filepath)
 {
   mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
   mrb_ary_push(mrb, loaded_files, filepath);
-
-  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), loaded_files);
-
   return;
 }
 
