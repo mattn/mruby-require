@@ -505,10 +505,21 @@ loading_files_add(mrb_state *mrb, mrb_value filepath)
   mrb_value loading_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\"_"));
   if (mrb_nil_p(loading_files)) {
     loading_files = mrb_ary_new(mrb);
+    mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\"_"), loading_files);
   }
   mrb_ary_push(mrb, loading_files, filepath);
 
-  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\"_"), loading_files);
+  return;
+}
+
+static void
+loading_files_delete(mrb_state *mrb, mrb_value filepath)
+{
+  mrb_value loading_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\"_"));
+  if (!mrb_array_p(loading_files)) {
+    return;
+  }
+  mrb_funcall(mrb, loading_files, "delete", 1, filepath);
 
   return;
 }
@@ -518,9 +529,6 @@ loaded_files_add(mrb_state *mrb, mrb_value filepath)
 {
   mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
   mrb_ary_push(mrb, loaded_files, filepath);
-
-  mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), loaded_files);
-
   return;
 }
 
@@ -529,10 +537,10 @@ mrb_require(mrb_state *mrb, mrb_value filename)
 {
   mrb_value filepath = find_file(mrb, filename, 1);
   if (!mrb_nil_p(filepath) && loaded_files_check(mrb, filepath)) {
-
     loading_files_add(mrb, filepath);
     load_file(mrb, filepath);
     loaded_files_add(mrb, filepath);
+    loading_files_delete(mrb, filepath);
     return mrb_true_value();
   }
 
