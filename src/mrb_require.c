@@ -133,14 +133,23 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
   FILE *fp;
   char fpath[MAXPATHLEN];
   mrb_value filepath = mrb_str_dup(mrb, path);
-  mrb_str_cat2(mrb, filepath, "/");
-  mrb_str_buf_append(mrb, filepath, fname);
-  if (!mrb_nil_p(ext)) {
-    mrb_str_buf_append(mrb, filepath, ext);
+#ifdef _WIN32
+  if (RSTRING_PTR(fname)[1] == ':') {
+#else
+  if (RSTRING_PTR(fname)[0] == '/') {
+#endif
+    /* when absolute path */
+    mrb_funcall(mrb, filepath, "replace", 1, fname);
+  } else {
+    mrb_str_cat2(mrb, filepath, "/");
+    mrb_str_buf_append(mrb, filepath, fname);
   }
 
-  if (mrb_nil_p(filepath)) {
+  if (!mrb_string_p(filepath)) {
     return mrb_nil_value();
+  }
+  if (mrb_string_p(ext)) {
+    mrb_str_buf_append(mrb, filepath, ext);
   }
   debug("filepath: %s\n", RSTRING_PTR(filepath));
 
@@ -159,12 +168,11 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
 }
 
 static mrb_value
-find_file(mrb_state *mrb, mrb_value filename)
+find_file(mrb_state *mrb, mrb_value filename, int comp)
 {
   char *ext, *ptr, *tmp;
   mrb_value exts;
   int i, j;
-  FILE *fp;
 
   char *fname = RSTRING_PTR(filename);
   mrb_value filepath = mrb_nil_value();
@@ -185,33 +193,12 @@ find_file(mrb_state *mrb, mrb_value filename)
 
   ext = strrchr(ptr, '.');
   exts = mrb_ary_new(mrb);
-  if (ext == NULL) {
+  if (ext == NULL && comp) {
     mrb_ary_push(mrb, exts, mrb_str_new_cstr(mrb, ".rb"));
     mrb_ary_push(mrb, exts, mrb_str_new_cstr(mrb, ".mrb"));
     mrb_ary_push(mrb, exts, mrb_str_new_cstr(mrb, ".so"));
   } else {
     mrb_ary_push(mrb, exts, mrb_nil_value());
-  }
-
-  /* Absolute paths on Windows */
-#ifdef _WIN32
-  if (fname[1] == ':') {
-    fp = fopen(fname, "r");
-    if (fp == NULL) {
-      goto not_found;
-    }
-    fclose(fp);
-    return filename;
-  }
-#endif
-  /* when absolute path */
-  if (*fname == '/') {
-    fp = fopen(fname, "r");
-    if (fp == NULL) {
-      goto not_found;
-    }
-    fclose(fp);
-    return filename;
   }
 
   /* when a filename start with '.', $: = ['.'] */
@@ -233,7 +220,6 @@ find_file(mrb_state *mrb, mrb_value filename)
     }
   }
 
-not_found:
   mrb_load_fail(mrb, filename, "cannot load such file");
   return mrb_nil_value();
 }
@@ -451,8 +437,8 @@ load_file(mrb_state *mrb, mrb_value filepath)
     load_rb_file(mrb, filepath);
   } else if (strcmp(ext, ".mrb") == 0) {
     load_mrb_file(mrb, filepath);
-  } else if (strcmp(ext, ".so") == 0 || 
-             strcmp(ext, ".dll") == 0 || 
+  } else if (strcmp(ext, ".so") == 0 ||
+             strcmp(ext, ".dll") == 0 ||
              strcmp(ext, ".dylib") == 0) {
     load_so_file(mrb, filepath);
   } else {
@@ -463,7 +449,7 @@ load_file(mrb_state *mrb, mrb_value filepath)
 mrb_value
 mrb_load(mrb_state *mrb, mrb_value filename)
 {
-  mrb_value filepath = find_file(mrb, filename);
+  mrb_value filepath = find_file(mrb, filename, 0);
   load_file(mrb, filepath);
   return mrb_true_value(); // TODO: ??
 }
@@ -541,7 +527,7 @@ loaded_files_add(mrb_state *mrb, mrb_value filepath)
 mrb_value
 mrb_require(mrb_state *mrb, mrb_value filename)
 {
-  mrb_value filepath = find_file(mrb, filename);
+  mrb_value filepath = find_file(mrb, filename, 1);
   if (!mrb_nil_p(filepath) && loaded_files_check(mrb, filepath)) {
 
     loading_files_add(mrb, filepath);
