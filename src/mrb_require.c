@@ -229,12 +229,12 @@ replace_stop_with_return(mrb_state *mrb, mrb_irep *irep)
 {
   if (irep->iseq[irep->ilen - 1] == MKOP_A(OP_STOP, 0)) {
     if (irep->flags == MRB_ISEQ_NO_FREE) {
-      mrb_code* iseq = mrb_malloc(mrb, (irep->ilen + 1) * sizeof(mrb_code));
+      mrb_code* iseq = (mrb_code *)mrb_malloc(mrb, (irep->ilen + 1) * sizeof(mrb_code));
       memcpy(iseq, irep->iseq, irep->ilen * sizeof(mrb_code));
       irep->iseq = iseq;
       irep->flags &= ~MRB_ISEQ_NO_FREE;
     } else {
-      irep->iseq = mrb_realloc(mrb, irep->iseq, (irep->ilen + 1) * sizeof(mrb_code));
+      irep->iseq = (mrb_code *)mrb_realloc(mrb, irep->iseq, (irep->ilen + 1) * sizeof(mrb_code));
     }
     irep->iseq[irep->ilen - 1] = MKOP_A(OP_LOADNIL, 0);
     irep->iseq[irep->ilen] = MKOP_AB(OP_RETURN, 0, OP_R_NORMAL);
