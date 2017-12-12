@@ -33,6 +33,10 @@
 #include <dlfcn.h>
 #endif
 
+#ifndef MRB_PROC_TARGET_CLASS
+# define MRB_PROC_TARGET_CLASS(p, c) p->target_class = c
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
 #define dlopen(x,y) (void*)LoadLibrary(x)
@@ -282,7 +286,7 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
 
     replace_stop_with_return(mrb, irep);
     proc = mrb_proc_new(mrb, irep);
-    proc->target_class = mrb->object_class;
+    MRB_PROC_SET_TARGET_CLASS(proc, mrb->object_class);
 
     arena_idx = mrb_gc_arena_save(mrb);
     mrb_yield_with_class(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
@@ -306,7 +310,7 @@ mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
 
     replace_stop_with_return(mrb, irep);
     proc = mrb_proc_new(mrb, irep);
-    proc->target_class = mrb->object_class;
+    MRB_PROC_SET_TARGET_CLASS(proc, mrb->object_class);
 
     ai = mrb_gc_arena_save(mrb);
     mrb_yield_with_class(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
