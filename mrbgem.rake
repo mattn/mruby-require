@@ -55,7 +55,6 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     mr_position = -1 if mr_position.nil?
     compiled_in = gems_uniq[0..mr_position].map {|g| g.name}
     @bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name) or g.name == 'mruby-require'}
-    gems.reject! {|g| !compiled_in.include?(g.name)}
     libmruby_libs      = MRuby.targets["host"].linker.libraries
     libmruby_lib_paths = MRuby.targets["host"].linker.library_paths
     gems_uniq.each do |g|
@@ -74,7 +73,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
       sharedlib = "#{top_build_dir}/lib/#{g.name}.so"
       file sharedlib => g.objs do |t|
         if RUBY_PLATFORM.downcase =~ /mswin(?!ce)|mingw|bccwin/
-          libmruby_libs += %w(msvcrt kernel32 user32 gdi32 winspool comdlg32)
+          libmruby_libs += %w(msvcrt kernel32 user32 gdi32 winspool comdlg32 ws2_32)
           name = g.name.gsub(/-/, '_')
           has_rb = !Dir.glob("#{g.dir}/mrblib/*.rb").empty?
           has_c = !Dir.glob(["#{g.dir}/src/*"]).empty?
