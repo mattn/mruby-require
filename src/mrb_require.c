@@ -593,8 +593,8 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
 {
   char *env;
   struct RClass *krn;
-  krn = mrb->kernel_module;
   struct RClass *load_error;
+  krn = mrb->kernel_module;
 
   mrb_define_method(mrb, krn, "load",    mrb_f_load,    MRB_ARGS_REQ(1));
   mrb_define_method(mrb, krn, "require", mrb_f_require, MRB_ARGS_REQ(1));
