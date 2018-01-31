@@ -250,30 +250,26 @@ static void
 load_mrb_file(mrb_state *mrb, mrb_value filepath)
 {
   char *fpath = RSTRING_PTR(filepath);
-  int arena_idx;
+  int ai;
   FILE *fp;
   mrb_irep *irep;
 
-  {
-    FILE *fp = fopen(fpath, "rb");
-    if (fp == NULL) {
-      mrb_load_fail(
-        mrb,
-        mrb_str_new_cstr(mrb, fpath),
-        "cannot load such file"
-      );
-      return;
-    }
-    fclose(fp);
+  fp = fopen(fpath, "rb");
+  if (fp == NULL) {
+    mrb_load_fail(
+      mrb,
+      mrb_str_new_cstr(mrb, fpath),
+      "cannot load such file"
+    );
+    return;
   }
 
-  arena_idx = mrb_gc_arena_save(mrb);
+  ai = mrb_gc_arena_save(mrb);
 
-  fp = fopen(fpath, "rb");
   irep = mrb_read_irep_file(mrb, fp);
   fclose(fp);
 
-  mrb_gc_arena_restore(mrb, arena_idx);
+  mrb_gc_arena_restore(mrb, ai);
 
   if (irep) {
     struct RProc *proc;
@@ -288,9 +284,9 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
     proc = mrb_proc_new(mrb, irep);
     MRB_PROC_SET_TARGET_CLASS(proc, mrb->object_class);
 
-    arena_idx = mrb_gc_arena_save(mrb);
+    ai = mrb_gc_arena_save(mrb);
     mrb_yield_with_class(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
-    mrb_gc_arena_restore(mrb, arena_idx);
+    mrb_gc_arena_restore(mrb, ai);
   } else if (mrb->exc) {
     // fail to load
     longjmp(*(jmp_buf*)mrb->jmp, 1);
@@ -409,26 +405,24 @@ unload_so_file(mrb_state *mrb, mrb_value filepath)
 static void
 load_rb_file(mrb_state *mrb, mrb_value filepath)
 {
-  FILE *file;
+  FILE *fp;
   char *fpath = RSTRING_PTR(filepath);
   mrbc_context *mrbc_ctx;
+  int ai = mrb_gc_arena_save(mrb);
 
-  {
-    FILE *fp = fopen(fpath, "r");
-    if (fp == NULL) {
-      mrb_load_fail(mrb, filepath, "cannot load such file");
-      return;
-    }
-    fclose(fp);
+  fp = fopen((const char*)fpath, "r");
+  if (fp == NULL) {
+    mrb_load_fail(mrb, filepath, "cannot load such file");
+    return;
   }
 
   mrbc_ctx = mrbc_context_new(mrb);
 
-  file = fopen((const char*)fpath, "r");
   mrbc_filename(mrb, mrbc_ctx, fpath);
-  mrb_load_file_cxt(mrb, file, mrbc_ctx);
-  fclose(file);
+  mrb_load_file_cxt(mrb, fp, NULL);
+  fclose(fp);
 
+  mrb_gc_arena_restore(mrb, ai);
   mrbc_context_free(mrb, mrbc_ctx);
 }
 
