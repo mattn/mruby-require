@@ -419,7 +419,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   mrbc_ctx = mrbc_context_new(mrb);
 
   mrbc_filename(mrb, mrbc_ctx, fpath);
-  mrb_load_file_cxt(mrb, fp, NULL);
+  mrb_load_file_cxt(mrb, fp, mrbc_ctx);
   fclose(fp);
 
   mrb_gc_arena_restore(mrb, ai);
