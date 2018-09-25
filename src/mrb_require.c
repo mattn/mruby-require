@@ -33,6 +33,11 @@
 #include <dlfcn.h>
 #endif
 
+/* We can't use MRUBY_RELEASE_NO to determine if byte code implementation is old */
+#ifdef MKOP_A
+#define USE_MRUBY_OLD_BYTE_CODE
+#endif
+
 #ifndef MRB_PROC_TARGET_CLASS
 # define MRB_PROC_TARGET_CLASS(p, c) p->target_class = c
 #endif
@@ -88,6 +93,7 @@ realpath(const char *path, char *resolved_path) {
 # define debug(...) ((void)0)
 #endif
 
+#ifdef USE_MRUBY_OLD_BYTE_CODE
 static void
 mrb_load_fail(mrb_state *mrb, mrb_value path, const char *err)
 {
@@ -101,6 +107,7 @@ mrb_load_fail(mrb_state *mrb, mrb_value path, const char *err)
 
   mrb_exc_raise(mrb, exc);
 }
+#endif
 
 static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
@@ -228,6 +235,7 @@ find_file(mrb_state *mrb, mrb_value filename, int comp)
   return mrb_nil_value();
 }
 
+#ifdef USE_MRUBY_OLD_BYTE_CODE
 static void
 replace_stop_with_return(mrb_state *mrb, mrb_irep *irep)
 {
@@ -245,6 +253,7 @@ replace_stop_with_return(mrb_state *mrb, mrb_irep *irep)
     irep->ilen++;
   }
 }
+#endif
 
 static void
 load_mrb_file(mrb_state *mrb, mrb_value filepath)
@@ -280,7 +289,9 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
     }
     */
 
+#ifdef USE_MRUBY_OLD_BYTE_CODE
     replace_stop_with_return(mrb, irep);
+#endif
     proc = mrb_proc_new(mrb, irep);
     MRB_PROC_SET_TARGET_CLASS(proc, mrb->object_class);
 
