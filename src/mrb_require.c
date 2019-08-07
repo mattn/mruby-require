@@ -33,6 +33,15 @@
 #include <dlfcn.h>
 #endif
 
+#ifndef RSTRING_CSTR
+static const char*
+mrb_string_cstr(mrb_state *mrb, mrb_value s)
+{
+  return mrb_string_value_cstr(mrb, &s);
+}
+#define RSTRING_CSTR(mrb,s)  mrb_string_cstr(mrb, s)
+#endif
+
 /* We can't use MRUBY_RELEASE_NO to determine if byte code implementation is old */
 #ifdef MKOP_A
 #define USE_MRUBY_OLD_BYTE_CODE
@@ -93,7 +102,6 @@ realpath(const char *path, char *resolved_path) {
 # define debug(...) ((void)0)
 #endif
 
-#ifdef USE_MRUBY_OLD_BYTE_CODE
 static void
 mrb_load_fail(mrb_state *mrb, mrb_value path, const char *err)
 {
@@ -107,7 +115,6 @@ mrb_load_fail(mrb_state *mrb, mrb_value path, const char *err)
 
   mrb_exc_raise(mrb, exc);
 }
-#endif
 
 static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
@@ -164,7 +171,7 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
   }
   debug("filepath: %s\n", RSTRING_PTR(filepath));
 
-  if (realpath(RSTRING_PTR(filepath), fpath) == NULL) {
+  if (realpath(RSTRING_CSTR(mrb, filepath), fpath) == NULL) {
     return mrb_nil_value();
   }
   debug("fpath: %s\n", fpath);
@@ -181,11 +188,11 @@ find_file_check(mrb_state *mrb, mrb_value path, mrb_value fname, mrb_value ext)
 static mrb_value
 find_file(mrb_state *mrb, mrb_value filename, int comp)
 {
-  char *ext, *ptr, *tmp;
+  const char *ext, *ptr, *tmp;
   mrb_value exts;
   int i, j;
 
-  char *fname = RSTRING_PTR(filename);
+  const char *fname = RSTRING_CSTR(mrb, filename);
   mrb_value filepath = mrb_nil_value();
   mrb_value load_path = mrb_obj_dup(mrb, mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$:")));
   load_path = mrb_check_array_type(mrb, load_path);
@@ -258,7 +265,7 @@ replace_stop_with_return(mrb_state *mrb, mrb_irep *irep)
 static void
 load_mrb_file(mrb_state *mrb, mrb_value filepath)
 {
-  char *fpath = RSTRING_PTR(filepath);
+  const char *fpath = RSTRING_CSTR(mrb, filepath);
   int ai;
   FILE *fp;
   mrb_irep *irep;
@@ -315,7 +322,9 @@ mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
     int ai;
     struct RProc *proc;
 
+#ifdef USE_MRUBY_OLD_BYTE_CODE
     replace_stop_with_return(mrb, irep);
+#endif
     proc = mrb_proc_new(mrb, irep);
     MRB_PROC_SET_TARGET_CLASS(proc, mrb->object_class);
 
@@ -335,14 +344,14 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   char entry_irep[PATH_MAX] = {0};
   typedef void (*fn_mrb_gem_init)(mrb_state *mrb);
   fn_mrb_gem_init fn;
-  void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
+  void * handle = dlopen(RSTRING_CSTR(mrb, filepath), RTLD_LAZY|RTLD_GLOBAL);
   const uint8_t* data;
   if (!handle) {
     mrb_raise(mrb, E_RUNTIME_ERROR, dlerror());
   }
   dlerror(); // clear last error
 
-  tmp = top = ptr = strdup(RSTRING_PTR(filepath));
+  tmp = top = ptr = strdup(RSTRING_CSTR(mrb, filepath));
   while (tmp) {
     if ((tmp = strchr(ptr, '/')) || (tmp = strchr(ptr, '\\'))) {
       ptr = tmp + 1;
@@ -383,12 +392,12 @@ unload_so_file(mrb_state *mrb, mrb_value filepath)
   char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
   typedef void (*fn_mrb_gem_final)(mrb_state *mrb);
   fn_mrb_gem_final fn;
-  void * handle = dlopen(RSTRING_PTR(filepath), RTLD_LAZY|RTLD_GLOBAL);
+  void * handle = dlopen(RSTRING_CSTR(mrb, filepath), RTLD_LAZY|RTLD_GLOBAL);
   if (!handle) {
     return;
   }
 
-  tmp = top = ptr = strdup(RSTRING_PTR(filepath));
+  tmp = top = ptr = strdup(RSTRING_CSTR(mrb, filepath));
   while (tmp) {
     if ((tmp = strchr(ptr, '/')) || (tmp = strchr(ptr, '\\'))) {
       ptr = tmp + 1;
@@ -417,7 +426,7 @@ static void
 load_rb_file(mrb_state *mrb, mrb_value filepath)
 {
   FILE *fp;
-  char *fpath = RSTRING_PTR(filepath);
+  const char *fpath = RSTRING_CSTR(mrb, filepath);
   mrbc_context *mrbc_ctx;
   int ai = mrb_gc_arena_save(mrb);
 
@@ -440,7 +449,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
 static void
 load_file(mrb_state *mrb, mrb_value filepath)
 {
-  char *ext = strrchr(RSTRING_PTR(filepath), '.');
+  char *ext = strrchr(RSTRING_CSTR(mrb, filepath), '.');
 
   if (!ext || strcmp(ext, ".rb") == 0) {
     load_rb_file(mrb, filepath);
@@ -636,7 +645,7 @@ mrb_mruby_require_gem_final(mrb_state* mrb)
   int i;
   for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
     mrb_value f = mrb_ary_entry(loaded_files, i);
-    const char* ext = strrchr(RSTRING_PTR(f), '.');
+    const char* ext = strrchr(RSTRING_CSTR(mrb, f), '.');
     if (ext && strcmp(ext, ".so") == 0) {
       unload_so_file(mrb, f);
     }
