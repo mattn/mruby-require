@@ -437,6 +437,7 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   }
 
   mrbc_ctx = mrbc_context_new(mrb);
+  mrbc_ctx->capture_errors = 1;
 
   mrbc_filename(mrb, mrbc_ctx, fpath);
   mrb_load_file_cxt(mrb, fp, mrbc_ctx);
