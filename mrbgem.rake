@@ -51,16 +51,20 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     # Only gems included AFTER the mruby-require gem during compilation are 
     # compiled as separate objects.
     gems_uniq   = gems.uniq {|x| x.name}
-    mr_position = gems_uniq.find_index {|g| g.name == "mruby-require"}
+	mr_position = gems_uniq.find_index {|g| g.name == "mruby-require" }
     mr_position = -1 if mr_position.nil?
     compiled_in = gems_uniq[0..mr_position].map {|g| g.name}
-    @bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name) or g.name == 'mruby-require'}
-    gems.reject! {|g| !compiled_in.include?(g.name)}
+    white_list = ["mruby-require", "mruby-test", "mruby-bin-mrbc"]
+	@bundled    = gems_uniq.reject {|g| compiled_in.include?(g.name)}
+	gems.reject! {|g| !compiled_in.include?(g.name) and !white_list.include?(g.name)}
     libmruby_libs      = MRuby.targets["host"].linker.libraries
     libmruby_lib_paths = MRuby.targets["host"].linker.library_paths
     gems_uniq.each do |g|
       unless g.name == "mruby-require"
-        g.setup 
+        begin
+          g.setup
+        rescue
+        end
         libmruby_libs      += g.linker.libraries
         libmruby_lib_paths += g.linker.library_paths
       end
