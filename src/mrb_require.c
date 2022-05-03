@@ -13,6 +13,8 @@
 #include "mruby/variable.h"
 #include "mruby/array.h"
 #include "mruby/numeric.h"
+#include "mruby/internal.h"
+#include "mruby/irep.h"
 
 #include "opcode.h"
 #include <stdio.h>
