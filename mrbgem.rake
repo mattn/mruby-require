@@ -120,10 +120,12 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
   end
 
   spec.cc.include_paths << ["#{MRUBY_ROOT}/src"]
-  if RUBY_PLATFORM.downcase !~ /mswin(?!ce)|mingw|bccwin/
-    spec.linker.libraries << ['dl']
-    spec.cc.flags << "-DMRBGEMS_ROOT=\\\"#{File.expand_path top_build_dir}/lib\\\""
-  else
-    spec.cc.flags << "-DMRBGEMS_ROOT=\"\"\\\"#{File.expand_path top_build_dir}/lib\\\"\"\""
+  unless spec.cc.flags.flatten.find {|e| e.match /DMRBGEMS_ROOT/}
+    if RUBY_PLATFORM.downcase !~ /mswin(?!ce)|mingw|bccwin/
+      spec.linker.libraries << ['dl']
+      spec.cc.flags << "-DMRBGEMS_ROOT=\\\"#{File.expand_path top_build_dir}/lib\\\""
+    else
+      spec.cc.flags << "-DMRBGEMS_ROOT=\"\"\\\"#{File.expand_path top_build_dir}/lib\\\"\"\""
+    end
   end
 end
