@@ -17,6 +17,7 @@
 #include "mruby/irep.h"
 
 #include "opcode.h"
+//#include <mruby/opcode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
@@ -439,10 +440,24 @@ load_rb_file(mrb_state *mrb, mrb_value filepath)
   }
 
   mrbc_ctx = mrbc_context_new(mrb);
+  mrbc_ctx->capture_errors = 1;
 
   mrbc_filename(mrb, mrbc_ctx, fpath);
   mrb_load_file_cxt(mrb, fp, mrbc_ctx);
   fclose(fp);
+
+  if(mrb->exc) {
+    mrb_value exc_obj = mrb_obj_value(mrb->exc);
+    mrb_value err_message = mrb_funcall(mrb, exc_obj, "inspect", 0);
+    const char *err = RSTRING_PTR(err_message);
+    struct RClass *exc_class = mrb_obj_class(mrb, exc_obj);
+    if(!exc_class)
+      exc_class = mrb->eException_class;
+    mrb_gc_arena_restore(mrb, ai);
+    mrbc_context_free(mrb, mrbc_ctx);
+    mrb_raisef(mrb, exc_class,"In %s: %s", fpath, err);
+    return;
+  }
 
   mrb_gc_arena_restore(mrb, ai);
   mrbc_context_free(mrb, mrbc_ctx);
