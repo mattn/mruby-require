@@ -9,6 +9,8 @@ if __FILE__ == $PROGRAM_NAME
   exit system(%Q[cd tmp/mruby; MRUBY_CONFIG=#{File.expand_path __FILE__} ./minirake #{ARGV.join(' ')}])
 end
 
+MRuby::Lockfile.disable rescue nil # for development
+
 MRuby::Build.new do |conf|
   toolchain :clang
   conf.cc.flags << ["-fPIC"]
