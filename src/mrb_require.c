@@ -18,10 +18,8 @@
 #include "opcode.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <setjmp.h>
 #include <sys/types.h>
 #include <limits.h>
-#include <setjmp.h>
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #ifndef PATH_MAX
 # define PATH_MAX MAX_PATH
@@ -308,7 +306,7 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
     mrb_gc_arena_restore(mrb, ai);
   } else if (mrb->exc) {
     // fail to load
-    longjmp(*(jmp_buf*)mrb->jmp, 1);
+    mrb_exc_raise(mrb, mrb_obj_value(mrb->exc));
   }
 }
 
@@ -334,7 +332,7 @@ mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
     mrb_gc_arena_restore(mrb, ai);
   } else if (mrb->exc) {
     // fail to load
-    longjmp(*(jmp_buf*)mrb->jmp, 1);
+    mrb_exc_raise(mrb, mrb_obj_value(mrb->exc));
   }
 }
 
