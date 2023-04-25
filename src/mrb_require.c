@@ -14,8 +14,8 @@
 #include "mruby/array.h"
 #include "mruby/numeric.h"
 #include "mruby/irep.h"
+#include "mruby/opcode.h"
 
-#include "opcode.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
