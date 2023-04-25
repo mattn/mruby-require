@@ -13,6 +13,8 @@ MRuby::Lockfile.disable rescue nil # for development
 
 MRuby::Build.new do |conf|
   toolchain :clang
+  conf.enable_debug
+  conf.enable_test
   conf.cc.flags << ["-fPIC"]
   conf.gem :github => 'mattn/mruby-curl'
   conf.gem :github => 'mattn/mruby-pcre-regexp'
