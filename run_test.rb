@@ -16,8 +16,6 @@ MRuby::Build.new do |conf|
   conf.enable_debug
   conf.enable_test
   conf.cc.flags << ["-fPIC"]
-  conf.gem :github => 'mattn/mruby-curl'
-  conf.gem :github => 'mattn/mruby-pcre-regexp'
   conf.gembox 'default'
   conf.gem File.dirname(File.expand_path(__FILE__))
 end
