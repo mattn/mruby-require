@@ -1,0 +1,35 @@
+name: build and test
+
+on:
+  push:
+    branches: "*"
+  pull_request:
+    branches: "*"
+
+jobs:
+  ubuntu-22-04:
+    runs-on: ubuntu-latest
+    name: ubuntu-latest (mruby-${{ matrix.TARGET_MRUBY }})
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        TARGET_MRUBY:
+        - master
+        - 3.2.0
+        - 3.1.0
+        - 3.0.0
+    env:
+      MRUBY_URL: "https://github.com/mruby/mruby/archive/${{ matrix.TARGET_MRUBY }}.tar.gz"
+      MRUBY_DIR: "mruby-${{ matrix.TARGET_MRUBY }}"
+      MRUBY_CONFIG: "run_test.rb"
+    steps:
+    - uses: actions/checkout@v3
+    - name: fetch and extract mruby
+      run: wget -O- $MRUBY_URL | tar xzf -
+    - name: pre-clean
+      run: rake -vf $MRUBY_DIR/Rakefile clean
+    - name: build
+      run: rake -mvf $MRUBY_DIR/Rakefile test:build || rake -mvf $MRUBY_DIR/Rakefile || rake -vf $MRUBY_DIR/Rakefile
+    - name: test
+      run: rake -vf $MRUBY_DIR/Rakefile test
