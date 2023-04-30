@@ -119,7 +119,6 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
     end
   end
 
-  spec.cc.include_paths << ["#{MRUBY_ROOT}/src"]
   unless spec.cc.flags.flatten.find {|e| e.match /DMRBGEMS_ROOT/}
     if RUBY_PLATFORM.downcase !~ /mswin(?!ce)|mingw|bccwin/
       spec.linker.libraries << ['dl']
