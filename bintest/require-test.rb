@@ -45,3 +45,11 @@ assert "load" do
   assert_mruby_require /\(LoadError\)$/, %(load "testfiles/minimal") # because it does not complement the extensions
   assert_mruby_require /\(LoadError\)$/, %(load "testfiles/notexist.rb")
 end
+
+assert "load with wrapper" do
+  assert_mruby_require /\{:self=>main\}\n\{:instance_variables=>\[\]\}\n\{:module=>A\}\n/, %(load "testfiles/minimal.rb", nil)
+  assert_mruby_require /\{:self=>main\}\n\{:instance_variables=>\[\]\}\n\{:module=>A\}\n/, %(load "testfiles/minimal.rb", false)
+  assert_mruby_require /\{:self=>main\}\n\{:instance_variables=>\[\]\}\n\{:module=>#<Module:0x\w+>::A\}\n/, %(load "testfiles/minimal.rb", true)
+  assert_mruby_require /\{:self=>main\}\n\{:instance_variables=>\[\]\}\n\{:module=>#<Module:0x\w+>::A\}\n/, %(load "testfiles/minimal.rb", Object)
+  assert_mruby_require /\{:self=>main\}\n\{:instance_variables=>\[\]\}\n\{:module=>Kernel::A\}\n/, %(load "testfiles/minimal.rb", Kernel)
+end
