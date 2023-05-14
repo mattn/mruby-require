@@ -616,6 +616,7 @@ mrb_load_error_path(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_require_gem_init(mrb_state* mrb)
 {
+  int ai = mrb_gc_arena_save(mrb);
   char *env;
   struct RClass *krn;
   struct RClass *load_error;
@@ -644,6 +645,7 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
       len = end - ptr;
 
       mrb_require(mrb, mrb_str_new(mrb, ptr, len));
+      mrb_gc_arena_restore(mrb, ai);
       i += len;
     }
   }
