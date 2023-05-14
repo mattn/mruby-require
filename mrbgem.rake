@@ -100,7 +100,7 @@ MRuby::Gem::Specification.new('mruby-require') do |spec|
                 libfile("#{build_dir}/lib/libmruby"),
                 libfile("#{build_dir}/lib/libmruby_core"),
                 (libmruby_libs + (g.linker ? g.linker.libraries : [])).flatten.uniq.map {|l| is_vc ? "#{l}.lib" : "-l#{l}"}].flatten.join(" "),
-            :flags_before_libraries => '',
+            :flags_before_libraries => g.linker ? g.linker.flags_before_libraries.flatten.join(" ") : '',
             :flags_after_libraries => '',
         }
 
