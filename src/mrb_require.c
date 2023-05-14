@@ -116,6 +116,20 @@ mrb_load_fail(mrb_state *mrb, mrb_value path, const char *err)
 }
 
 static mrb_value
+get_loaded_features(mrb_state *mrb, mrb_bool replace_new)
+{
+  mrb_value ary = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
+  ary = mrb_check_array_type(mrb, ary);
+
+  if (mrb_nil_p(ary) && replace_new) {
+    ary = mrb_ary_new(mrb);
+    mrb_gv_set(mrb, mrb_intern_cstr(mrb, "$\""), ary);
+  }
+
+  return ary;
+}
+
+static mrb_value
 envpath_to_mrb_ary(mrb_state *mrb, const char *name)
 {
   int i;
@@ -489,13 +503,11 @@ static int
 loaded_files_check(mrb_state *mrb, mrb_value filepath)
 {
   mrb_value loading_files;
-  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
+  mrb_value loaded_files = get_loaded_features(mrb, TRUE);
   int i;
   for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
-    if (mrb_str_cmp(
-        mrb,
-        mrb_ary_entry(loaded_files, i),
-        filepath) == 0) {
+    mrb_value e = mrb_ary_entry(loaded_files, i);
+    if (mrb_string_p(e) && mrb_str_cmp(mrb, e, filepath) == 0) {
       return 0;
     }
   }
@@ -544,7 +556,7 @@ loading_files_delete(mrb_state *mrb, mrb_value filepath)
 static void
 loaded_files_add(mrb_state *mrb, mrb_value filepath)
 {
-  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
+  mrb_value loaded_files = get_loaded_features(mrb, TRUE);
   mrb_ary_push(mrb, loaded_files, filepath);
   return;
 }
@@ -640,13 +652,17 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
 void
 mrb_mruby_require_gem_final(mrb_state* mrb)
 {
-  mrb_value loaded_files = mrb_gv_get(mrb, mrb_intern_cstr(mrb, "$\""));
-  int i;
-  for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
-    mrb_value f = mrb_ary_entry(loaded_files, i);
-    const char* ext = strrchr(RSTRING_CSTR(mrb, f), '.');
-    if (ext && strcmp(ext, ".so") == 0) {
-      unload_so_file(mrb, f);
+  mrb_value loaded_files = get_loaded_features(mrb, FALSE);
+  if (!mrb_nil_p(loaded_files)) {
+    int i;
+    for (i = 0; i < RARRAY_LEN(loaded_files); i++) {
+      mrb_value f = mrb_ary_entry(loaded_files, i);
+      if (mrb_string_p(f)) {
+        const char* ext = strrchr(RSTRING_CSTR(mrb, f), '.');
+        if (ext && strcmp(ext, ".so") == 0) {
+          unload_so_file(mrb, f);
+        }
+      }
     }
   }
 }
