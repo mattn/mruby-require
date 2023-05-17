@@ -15,6 +15,7 @@ MRuby::Build.new do |conf|
   toolchain :clang
   conf.enable_debug
   conf.enable_test
+  conf.enable_bintest
   conf.cc.flags << ["-fPIC"]
   conf.gembox 'default'
   conf.gem File.dirname(File.expand_path(__FILE__))
