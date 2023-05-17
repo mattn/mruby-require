@@ -15,6 +15,7 @@
 #include "mruby/numeric.h"
 #include "mruby/irep.h"
 #include "mruby/opcode.h"
+#include "mruby/class.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -275,8 +276,8 @@ replace_stop_with_return(mrb_state *mrb, mrb_irep *irep)
 }
 #endif
 
-static void
-load_mrb_file(mrb_state *mrb, mrb_value filepath)
+static mrb_value
+load_mrb_file(mrb_state *mrb, mrb_value filepath, struct RClass *wrap)
 {
   const char *fpath = RSTRING_CSTR(mrb, filepath);
   int ai;
@@ -290,7 +291,7 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
       mrb_str_new_cstr(mrb, fpath),
       "cannot load such file"
     );
-    return;
+    return mrb_nil_value(); // not reached
   }
 
   ai = mrb_gc_arena_save(mrb);
@@ -313,15 +314,16 @@ load_mrb_file(mrb_state *mrb, mrb_value filepath)
     replace_stop_with_return(mrb, irep);
 #endif
     proc = mrb_proc_new(mrb, irep);
-    MRB_PROC_SET_TARGET_CLASS(proc, mrb->object_class);
+    MRB_PROC_SET_TARGET_CLASS(proc, wrap);
+    proc->flags |= MRB_PROC_SCOPE;
 
-    ai = mrb_gc_arena_save(mrb);
-    mrb_yield_with_class(mrb, mrb_obj_value(proc), 0, NULL, mrb_top_self(mrb), mrb->object_class);
-    mrb_gc_arena_restore(mrb, ai);
+    return mrb_obj_value(proc);
   } else if (mrb->exc) {
     // fail to load
     mrb_exc_raise(mrb, mrb_obj_value(mrb->exc));
   }
+
+  return mrb_nil_value();
 }
 
 static void
@@ -350,7 +352,7 @@ mrb_load_irep_data(mrb_state* mrb, const uint8_t* data)
   }
 }
 
-static void
+static mrb_value
 load_so_file(mrb_state *mrb, mrb_value filepath)
 {
   char entry[PATH_MAX] = {0}, *ptr, *top, *tmp;
@@ -397,6 +399,8 @@ load_so_file(mrb_state *mrb, mrb_value filepath)
   if (data != NULL) {
     mrb_load_irep_data(mrb, data);
   }
+
+  return mrb_nil_value();
 }
 
 static void
@@ -435,45 +439,52 @@ unload_so_file(mrb_state *mrb, mrb_value filepath)
   fn(mrb);
 }
 
-static void
-load_rb_file(mrb_state *mrb, mrb_value filepath)
+static mrb_value
+load_rb_file(mrb_state *mrb, mrb_value filepath, struct RClass *wrap)
 {
   FILE *fp;
   const char *fpath = RSTRING_CSTR(mrb, filepath);
   mrbc_context *mrbc_ctx;
   int ai = mrb_gc_arena_save(mrb);
+  mrb_value proc;
 
   fp = fopen((const char*)fpath, "r");
   if (fp == NULL) {
     mrb_load_fail(mrb, filepath, "cannot load such file");
-    return;
+    return mrb_nil_value(); // not reached
   }
 
   mrbc_ctx = mrbc_context_new(mrb);
+  mrbc_ctx->no_exec = TRUE;
 
   mrbc_filename(mrb, mrbc_ctx, fpath);
-  mrb_load_file_cxt(mrb, fp, mrbc_ctx);
+  proc = mrb_load_file_cxt(mrb, fp, mrbc_ctx);
+  MRB_PROC_SET_TARGET_CLASS(mrb_proc_ptr(proc), wrap);
+  mrb_proc_ptr(proc)->flags |= MRB_PROC_SCOPE;
   fclose(fp);
 
   mrb_gc_arena_restore(mrb, ai);
+  mrb_gc_protect(mrb, proc);
   mrbc_context_free(mrb, mrbc_ctx);
+
+  return proc;
 }
 
-static void
-load_file(mrb_state *mrb, mrb_value filepath)
+static mrb_value
+load_file(mrb_state *mrb, mrb_value filepath, struct RClass *wrap)
 {
   char *ext = strrchr(RSTRING_CSTR(mrb, filepath), '.');
 
   if (!ext || strcmp(ext, ".rb") == 0) {
-    load_rb_file(mrb, filepath);
+    return load_rb_file(mrb, filepath, wrap);
   } else if (strcmp(ext, ".mrb") == 0) {
-    load_mrb_file(mrb, filepath);
+    return load_mrb_file(mrb, filepath, wrap);
   } else if (strcmp(ext, ".so") == 0 ||
              strcmp(ext, ".dll") == 0 ||
              strcmp(ext, ".dylib") == 0) {
-    load_so_file(mrb, filepath);
+    return load_so_file(mrb, filepath);
   } else {
-    load_rb_file(mrb, filepath);
+    return load_rb_file(mrb, filepath, wrap);
   }
 }
 
@@ -481,22 +492,8 @@ mrb_value
 mrb_load(mrb_state *mrb, mrb_value filename)
 {
   mrb_value filepath = find_file(mrb, filename, 0);
-  load_file(mrb, filepath);
+  load_file(mrb, filepath, mrb->object_class);
   return mrb_true_value(); // TODO: ??
-}
-
-mrb_value
-mrb_f_load(mrb_state *mrb, mrb_value self)
-{
-  mrb_value filename;
-
-  mrb_get_args(mrb, "o", &filename);
-  if (mrb_type(filename) != MRB_TT_STRING) {
-    mrb_raisef(mrb, E_TYPE_ERROR, "can't convert %S into String", filename);
-    return mrb_nil_value();
-  }
-
-  return mrb_load(mrb, filename);
 }
 
 static int
@@ -567,7 +564,7 @@ mrb_require(mrb_state *mrb, mrb_value filename)
   mrb_value filepath = find_file(mrb, filename, 1);
   if (!mrb_nil_p(filepath) && loaded_files_check(mrb, filepath)) {
     loading_files_add(mrb, filepath);
-    load_file(mrb, filepath);
+    load_file(mrb, filepath, mrb->object_class);
     loaded_files_add(mrb, filepath);
     loading_files_delete(mrb, filepath);
     return mrb_true_value();
@@ -576,18 +573,25 @@ mrb_require(mrb_state *mrb, mrb_value filename)
   return mrb_false_value();
 }
 
-mrb_value
-mrb_f_require(mrb_state *mrb, mrb_value self)
+static mrb_value
+require_load_library(mrb_state *mrb, mrb_value self)
 {
-  mrb_value filename;
+  mrb_value filename, wrap, lib;
+  mrb_bool for_require;
 
-  mrb_get_args(mrb, "o", &filename);
+  mrb_get_args(mrb, "obo", &filename, &for_require, &wrap);
   if (mrb_type(filename) != MRB_TT_STRING) {
     mrb_raisef(mrb, E_TYPE_ERROR, "can't convert %S into String", filename);
     return mrb_nil_value();
   }
 
-  return mrb_require(mrb, filename);
+  filename = find_file(mrb, filename, (for_require ? 1 : 0));
+  if (for_require && !loaded_files_check(mrb, filename)) {
+    return mrb_false_value();
+  }
+  lib = load_file(mrb, filename, (mrb_type(wrap) == MRB_TT_MODULE ? mrb_class_ptr(wrap) : mrb->object_class));
+
+  return mrb_assoc_new(mrb, lib, (mrb_type(lib) == MRB_TT_PROC ? filename : mrb_nil_value()));
 }
 
 static mrb_value
@@ -622,8 +626,7 @@ mrb_mruby_require_gem_init(mrb_state* mrb)
   struct RClass *load_error;
   krn = mrb->kernel_module;
 
-  mrb_define_method(mrb, krn, "load",    mrb_f_load,    MRB_ARGS_REQ(1));
-  mrb_define_method(mrb, krn, "require", mrb_f_require, MRB_ARGS_REQ(1));
+  mrb_define_class_method(mrb, krn, "__require_load_library", require_load_library, MRB_ARGS_REQ(2));
 
   load_error = mrb_define_class(mrb, "LoadError", E_SCRIPT_ERROR);
   mrb_define_method(mrb, load_error, "path", mrb_load_error_path, MRB_ARGS_NONE());
